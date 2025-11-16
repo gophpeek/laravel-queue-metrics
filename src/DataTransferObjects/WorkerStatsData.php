@@ -28,22 +28,25 @@ final readonly class WorkerStatsData
      */
     public static function fromArray(array $data): self
     {
+        $pid = $data['pid'] ?? 0;
         $hostname = $data['hostname'] ?? gethostname() ?: 'unknown';
         $connection = $data['connection'] ?? 'default';
         $queue = $data['queue'] ?? 'default';
         $status = $data['status'] ?? 'idle';
+        $jobsProcessed = $data['jobs_processed'] ?? 0;
         $currentJob = $data['current_job'] ?? null;
+        $idlePercentage = $data['idle_percentage'] ?? 0.0;
         $spawnedAt = $data['spawned_at'] ?? null;
 
         return new self(
-            pid: is_numeric($data['pid'] ?? 0) ? (int) $data['pid'] : 0,
+            pid: is_numeric($pid) ? (int) $pid : 0,
             hostname: is_string($hostname) ? $hostname : 'unknown',
             connection: is_string($connection) ? $connection : 'default',
             queue: is_string($queue) ? $queue : 'default',
             status: is_string($status) ? $status : 'idle',
-            jobsProcessed: is_numeric($data['jobs_processed'] ?? 0) ? (int) $data['jobs_processed'] : 0,
+            jobsProcessed: is_numeric($jobsProcessed) ? (int) $jobsProcessed : 0,
             currentJob: is_string($currentJob) ? $currentJob : null,
-            idlePercentage: is_numeric($data['idle_percentage'] ?? 0.0) ? (float) $data['idle_percentage'] : 0.0,
+            idlePercentage: is_numeric($idlePercentage) ? (float) $idlePercentage : 0.0,
             spawnedAt: (is_string($spawnedAt) || $spawnedAt instanceof \DateTimeInterface)
                 ? Carbon::parse($spawnedAt)
                 : Carbon::now(),

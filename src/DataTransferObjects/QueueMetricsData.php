@@ -37,7 +37,17 @@ final readonly class QueueMetricsData
     {
         $connection = $data['connection'] ?? 'default';
         $queue = $data['queue'] ?? 'default';
+        $depth = $data['depth'] ?? 0;
+        $pending = $data['pending'] ?? 0;
+        $scheduled = $data['scheduled'] ?? 0;
+        $reserved = $data['reserved'] ?? 0;
+        $oldestJobAge = $data['oldest_job_age'] ?? 0;
         $ageStatus = $data['age_status'] ?? 'normal';
+        $throughputPerMinute = $data['throughput_per_minute'] ?? 0.0;
+        $avgDuration = $data['avg_duration'] ?? 0.0;
+        $failureRate = $data['failure_rate'] ?? 0.0;
+        $utilizationRate = $data['utilization_rate'] ?? 0.0;
+        $activeWorkers = $data['active_workers'] ?? 0;
         $driver = $data['driver'] ?? 'unknown';
         $health = $data['health'] ?? [];
         $calculatedAt = $data['calculated_at'] ?? null;
@@ -45,17 +55,17 @@ final readonly class QueueMetricsData
         return new self(
             connection: is_string($connection) ? $connection : 'default',
             queue: is_string($queue) ? $queue : 'default',
-            depth: is_numeric($data['depth'] ?? 0) ? (int) $data['depth'] : 0,
-            pending: is_numeric($data['pending'] ?? 0) ? (int) $data['pending'] : 0,
-            scheduled: is_numeric($data['scheduled'] ?? 0) ? (int) $data['scheduled'] : 0,
-            reserved: is_numeric($data['reserved'] ?? 0) ? (int) $data['reserved'] : 0,
-            oldestJobAge: is_numeric($data['oldest_job_age'] ?? 0) ? (int) $data['oldest_job_age'] : 0,
+            depth: is_numeric($depth) ? (int) $depth : 0,
+            pending: is_numeric($pending) ? (int) $pending : 0,
+            scheduled: is_numeric($scheduled) ? (int) $scheduled : 0,
+            reserved: is_numeric($reserved) ? (int) $reserved : 0,
+            oldestJobAge: is_numeric($oldestJobAge) ? (int) $oldestJobAge : 0,
             ageStatus: is_string($ageStatus) ? $ageStatus : 'normal',
-            throughputPerMinute: is_numeric($data['throughput_per_minute'] ?? 0.0) ? (float) $data['throughput_per_minute'] : 0.0,
-            avgDuration: is_numeric($data['avg_duration'] ?? 0.0) ? (float) $data['avg_duration'] : 0.0,
-            failureRate: is_numeric($data['failure_rate'] ?? 0.0) ? (float) $data['failure_rate'] : 0.0,
-            utilizationRate: is_numeric($data['utilization_rate'] ?? 0.0) ? (float) $data['utilization_rate'] : 0.0,
-            activeWorkers: is_numeric($data['active_workers'] ?? 0) ? (int) $data['active_workers'] : 0,
+            throughputPerMinute: is_numeric($throughputPerMinute) ? (float) $throughputPerMinute : 0.0,
+            avgDuration: is_numeric($avgDuration) ? (float) $avgDuration : 0.0,
+            failureRate: is_numeric($failureRate) ? (float) $failureRate : 0.0,
+            utilizationRate: is_numeric($utilizationRate) ? (float) $utilizationRate : 0.0,
+            activeWorkers: is_numeric($activeWorkers) ? (int) $activeWorkers : 0,
             driver: is_string($driver) ? $driver : 'unknown',
             health: HealthStats::fromArray(is_array($health) ? $health : []),
             calculatedAt: (is_string($calculatedAt) || $calculatedAt instanceof \DateTimeInterface)

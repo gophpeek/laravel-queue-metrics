@@ -29,16 +29,21 @@ final readonly class BaselineData
     {
         $connection = $data['connection'] ?? 'default';
         $queue = $data['queue'] ?? 'default';
+        $cpuPercentPerJob = $data['cpu_percent_per_job'] ?? 0.0;
+        $memoryMbPerJob = $data['memory_mb_per_job'] ?? 0.0;
+        $avgDurationMs = $data['avg_duration_ms'] ?? 0.0;
+        $sampleCount = $data['sample_count'] ?? 0;
+        $confidenceScore = $data['confidence_score'] ?? 0.0;
         $calculatedAt = $data['calculated_at'] ?? null;
 
         return new self(
             connection: is_string($connection) ? $connection : 'default',
             queue: is_string($queue) ? $queue : 'default',
-            cpuPercentPerJob: is_numeric($data['cpu_percent_per_job'] ?? 0.0) ? (float) $data['cpu_percent_per_job'] : 0.0,
-            memoryMbPerJob: is_numeric($data['memory_mb_per_job'] ?? 0.0) ? (float) $data['memory_mb_per_job'] : 0.0,
-            avgDurationMs: is_numeric($data['avg_duration_ms'] ?? 0.0) ? (float) $data['avg_duration_ms'] : 0.0,
-            sampleCount: is_numeric($data['sample_count'] ?? 0) ? (int) $data['sample_count'] : 0,
-            confidenceScore: is_numeric($data['confidence_score'] ?? 0.0) ? (float) $data['confidence_score'] : 0.0,
+            cpuPercentPerJob: is_numeric($cpuPercentPerJob) ? (float) $cpuPercentPerJob : 0.0,
+            memoryMbPerJob: is_numeric($memoryMbPerJob) ? (float) $memoryMbPerJob : 0.0,
+            avgDurationMs: is_numeric($avgDurationMs) ? (float) $avgDurationMs : 0.0,
+            sampleCount: is_numeric($sampleCount) ? (int) $sampleCount : 0,
+            confidenceScore: is_numeric($confidenceScore) ? (float) $confidenceScore : 0.0,
             calculatedAt: (is_string($calculatedAt) || $calculatedAt instanceof \DateTimeInterface)
                 ? Carbon::parse($calculatedAt)
                 : Carbon::now(),

@@ -24,14 +24,22 @@ final readonly class DurationStats
      */
     public static function fromArray(array $data): self
     {
+        $avg = $data['avg'] ?? 0.0;
+        $min = $data['min'] ?? 0.0;
+        $max = $data['max'] ?? 0.0;
+        $p50 = $data['p50'] ?? 0.0;
+        $p95 = $data['p95'] ?? 0.0;
+        $p99 = $data['p99'] ?? 0.0;
+        $stddev = $data['stddev'] ?? 0.0;
+
         return new self(
-            avg: is_numeric($data['avg'] ?? 0.0) ? (float) $data['avg'] : 0.0,
-            min: is_numeric($data['min'] ?? 0.0) ? (float) $data['min'] : 0.0,
-            max: is_numeric($data['max'] ?? 0.0) ? (float) $data['max'] : 0.0,
-            p50: is_numeric($data['p50'] ?? 0.0) ? (float) $data['p50'] : 0.0,
-            p95: is_numeric($data['p95'] ?? 0.0) ? (float) $data['p95'] : 0.0,
-            p99: is_numeric($data['p99'] ?? 0.0) ? (float) $data['p99'] : 0.0,
-            stddev: is_numeric($data['stddev'] ?? 0.0) ? (float) $data['stddev'] : 0.0,
+            avg: is_numeric($avg) ? (float) $avg : 0.0,
+            min: is_numeric($min) ? (float) $min : 0.0,
+            max: is_numeric($max) ? (float) $max : 0.0,
+            p50: is_numeric($p50) ? (float) $p50 : 0.0,
+            p95: is_numeric($p95) ? (float) $p95 : 0.0,
+            p99: is_numeric($p99) ? (float) $p99 : 0.0,
+            stddev: is_numeric($stddev) ? (float) $stddev : 0.0,
         );
     }
 

@@ -46,19 +46,22 @@ All 5 tasks completed:
 - [ ] Health check logic
 
 #### 2.4 PHPStan Cleanup
-- [⏸️] Current: 87 baseline errors (down from 114: **27 errors fixed - 23.7% reduction**)
+- [⏸️] Current: 71 baseline errors (down from 114: **43 errors fixed - 37.7% reduction**)
 - [✅] Removed unused properties in RecordTrendDataCommand (2 errors fixed)
 - [✅] Fixed ProcessSnapshot property access in RecordWorkerHeartbeatAction (2 errors fixed)
-- [✅] Added type guards to 11 DTO fromArray methods (20 errors fixed)
+- [✅] Added type guards to 11 DTO fromArray methods - First pass (20 errors fixed)
   - Simple DTOs: DurationStats, BaselineData, FailureInfo, HealthStats, JobExecutionData, MemoryStats, ThroughputStats, WindowStats, WorkerStatsData (8 errors)
   - Composite DTOs: JobMetricsData, QueueMetricsData (12 errors)
 - [✅] Fixed array_merge in CalculateJobMetricsAction (3 errors fixed)
+- [✅] Eliminated double-access pattern in all DTO fromArray methods (16 errors fixed)
+  - Extract array values before type checking to avoid casting mixed twice
+  - All 11 DTOs now have clean fromArray implementations
+  - Zero DTO errors remaining in PHPStan baseline
 - [⏸️] SystemMetrics DTO property access (external library, won't fix)
-- [ ] Remaining mixed type casting errors (~5 errors)
-- [ ] Remaining argument.type errors (~5 errors)
-- [ ] offsetAccess.nonOffsetAccessible (~10 errors)
+- [ ] offsetAccess.nonOffsetAccessible in Controllers (~10 errors)
+- [ ] Prometheus Facade parameter count mismatches (~14 errors)
 - [ ] Other categories (remaining errors)
-- [ ] Target: <50 baseline errors (37 more to fix)
+- [ ] Target: <50 baseline errors (21 more to fix)
 
 **Estimated Time**: 2-3 days
 **Dependencies**: None

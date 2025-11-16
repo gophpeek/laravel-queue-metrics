@@ -25,7 +25,8 @@
       "mcp__serena__find_referencing_symbols",
       "Bash(xargs:*)",
       "Bash(composer show:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(paste:*)"
     ],
     "deny": [],
     "ask": []

@@ -21,11 +21,16 @@ final readonly class WindowStats
      */
     public static function fromArray(array $data): self
     {
+        $windowSeconds = $data['window_seconds'] ?? 0;
+        $jobsProcessed = $data['jobs_processed'] ?? 0;
+        $avgDuration = $data['avg_duration'] ?? 0.0;
+        $throughput = $data['throughput'] ?? 0.0;
+
         return new self(
-            windowSeconds: is_numeric($data['window_seconds'] ?? 0) ? (int) $data['window_seconds'] : 0,
-            jobsProcessed: is_numeric($data['jobs_processed'] ?? 0) ? (int) $data['jobs_processed'] : 0,
-            avgDuration: is_numeric($data['avg_duration'] ?? 0.0) ? (float) $data['avg_duration'] : 0.0,
-            throughput: is_numeric($data['throughput'] ?? 0.0) ? (float) $data['throughput'] : 0.0,
+            windowSeconds: is_numeric($windowSeconds) ? (int) $windowSeconds : 0,
+            jobsProcessed: is_numeric($jobsProcessed) ? (int) $jobsProcessed : 0,
+            avgDuration: is_numeric($avgDuration) ? (float) $avgDuration : 0.0,
+            throughput: is_numeric($throughput) ? (float) $throughput : 0.0,
         );
     }
 

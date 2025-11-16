@@ -21,11 +21,16 @@ final readonly class MemoryStats
      */
     public static function fromArray(array $data): self
     {
+        $avg = $data['avg'] ?? 0.0;
+        $peak = $data['peak'] ?? 0.0;
+        $p95 = $data['p95'] ?? 0.0;
+        $p99 = $data['p99'] ?? 0.0;
+
         return new self(
-            avg: is_numeric($data['avg'] ?? 0.0) ? (float) $data['avg'] : 0.0,
-            peak: is_numeric($data['peak'] ?? 0.0) ? (float) $data['peak'] : 0.0,
-            p95: is_numeric($data['p95'] ?? 0.0) ? (float) $data['p95'] : 0.0,
-            p99: is_numeric($data['p99'] ?? 0.0) ? (float) $data['p99'] : 0.0,
+            avg: is_numeric($avg) ? (float) $avg : 0.0,
+            peak: is_numeric($peak) ? (float) $peak : 0.0,
+            p95: is_numeric($p95) ? (float) $p95 : 0.0,
+            p99: is_numeric($p99) ? (float) $p99 : 0.0,
         );
     }
 

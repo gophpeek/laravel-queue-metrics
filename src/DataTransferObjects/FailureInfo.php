@@ -23,12 +23,14 @@ final readonly class FailureInfo
      */
     public static function fromArray(array $data): self
     {
+        $count = $data['count'] ?? 0;
+        $rate = $data['rate'] ?? 0.0;
         $lastFailedAt = $data['last_failed_at'] ?? null;
         $lastException = $data['last_exception'] ?? null;
 
         return new self(
-            count: is_numeric($data['count'] ?? 0) ? (int) $data['count'] : 0,
-            rate: is_numeric($data['rate'] ?? 0.0) ? (float) $data['rate'] : 0.0,
+            count: is_numeric($count) ? (int) $count : 0,
+            rate: is_numeric($rate) ? (float) $rate : 0.0,
             lastFailedAt: (is_string($lastFailedAt) || $lastFailedAt instanceof \DateTimeInterface)
                 ? Carbon::parse($lastFailedAt)
                 : null,

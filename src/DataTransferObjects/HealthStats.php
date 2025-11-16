@@ -24,14 +24,19 @@ final readonly class HealthStats
     public static function fromArray(array $data): self
     {
         $status = $data['status'] ?? 'unknown';
+        $score = $data['score'] ?? 0.0;
+        $depth = $data['depth'] ?? 0;
+        $oldestJobAge = $data['oldest_job_age'] ?? 0;
+        $failureRate = $data['failure_rate'] ?? 0.0;
+        $utilizationRate = $data['utilization_rate'] ?? 0.0;
 
         return new self(
             status: is_string($status) ? $status : 'unknown',
-            score: is_numeric($data['score'] ?? 0.0) ? (float) $data['score'] : 0.0,
-            depth: is_numeric($data['depth'] ?? 0) ? (int) $data['depth'] : 0,
-            oldestJobAge: is_numeric($data['oldest_job_age'] ?? 0) ? (int) $data['oldest_job_age'] : 0,
-            failureRate: is_numeric($data['failure_rate'] ?? 0.0) ? (float) $data['failure_rate'] : 0.0,
-            utilizationRate: is_numeric($data['utilization_rate'] ?? 0.0) ? (float) $data['utilization_rate'] : 0.0,
+            score: is_numeric($score) ? (float) $score : 0.0,
+            depth: is_numeric($depth) ? (int) $depth : 0,
+            oldestJobAge: is_numeric($oldestJobAge) ? (int) $oldestJobAge : 0,
+            failureRate: is_numeric($failureRate) ? (float) $failureRate : 0.0,
+            utilizationRate: is_numeric($utilizationRate) ? (float) $utilizationRate : 0.0,
         );
     }
 

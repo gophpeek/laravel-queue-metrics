@@ -21,8 +21,11 @@ final readonly class JobExecutionData
      */
     public static function fromArray(array $data): self
     {
-        $totalProcessed = is_numeric($data['total_processed'] ?? 0) ? (int) $data['total_processed'] : 0;
-        $totalFailed = is_numeric($data['total_failed'] ?? 0) ? (int) $data['total_failed'] : 0;
+        $totalProcessedValue = $data['total_processed'] ?? 0;
+        $totalFailedValue = $data['total_failed'] ?? 0;
+
+        $totalProcessed = is_numeric($totalProcessedValue) ? (int) $totalProcessedValue : 0;
+        $totalFailed = is_numeric($totalFailedValue) ? (int) $totalFailedValue : 0;
         $total = $totalProcessed + $totalFailed;
 
         return new self(
