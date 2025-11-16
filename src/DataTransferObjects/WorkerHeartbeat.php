@@ -33,22 +33,40 @@ final readonly class WorkerHeartbeat
      */
     public static function fromArray(array $data): self
     {
+        $workerId = $data['worker_id'] ?? '';
+        $connection = $data['connection'] ?? '';
+        $queue = $data['queue'] ?? '';
+        $state = $data['state'] ?? 'unknown';
+        $lastHeartbeat = $data['last_heartbeat'] ?? null;
+        $hostname = $data['hostname'] ?? 'unknown';
+
+        if (! is_string($workerId) || ! is_string($connection) || ! is_string($queue) || ! is_string($hostname)) {
+            throw new \InvalidArgumentException('worker_id, connection, queue, and hostname must be strings');
+        }
+
+        if (! is_string($state)) {
+            $state = 'unknown';
+        }
+
+        $currentJobId = $data['current_job_id'] ?? null;
+        $currentJobClass = $data['current_job_class'] ?? null;
+
         return new self(
-            workerId: $data['worker_id'],
-            connection: $data['connection'],
-            queue: $data['queue'],
-            state: WorkerState::from($data['state']),
-            lastHeartbeat: Carbon::parse($data['last_heartbeat']),
-            lastStateChange: isset($data['last_state_change'])
+            workerId: $workerId,
+            connection: $connection,
+            queue: $queue,
+            state: WorkerState::from($state),
+            lastHeartbeat: is_string($lastHeartbeat) ? Carbon::parse($lastHeartbeat) : Carbon::now(),
+            lastStateChange: isset($data['last_state_change']) && is_string($data['last_state_change'])
                 ? Carbon::parse($data['last_state_change'])
                 : null,
-            currentJobId: $data['current_job_id'] ?? null,
-            currentJobClass: $data['current_job_class'] ?? null,
-            idleTimeSeconds: (float) ($data['idle_time_seconds'] ?? 0.0),
-            busyTimeSeconds: (float) ($data['busy_time_seconds'] ?? 0.0),
-            jobsProcessed: (int) ($data['jobs_processed'] ?? 0),
-            pid: (int) $data['pid'],
-            hostname: $data['hostname'],
+            currentJobId: is_string($currentJobId) ? $currentJobId : null,
+            currentJobClass: is_string($currentJobClass) ? $currentJobClass : null,
+            idleTimeSeconds: is_numeric($data['idle_time_seconds'] ?? 0.0) ? (float) ($data['idle_time_seconds'] ?? 0.0) : 0.0,
+            busyTimeSeconds: is_numeric($data['busy_time_seconds'] ?? 0.0) ? (float) ($data['busy_time_seconds'] ?? 0.0) : 0.0,
+            jobsProcessed: is_numeric($data['jobs_processed'] ?? 0) ? (int) ($data['jobs_processed'] ?? 0) : 0,
+            pid: is_numeric($data['pid'] ?? 0) ? (int) ($data['pid'] ?? 0) : 0,
+            hostname: $hostname,
         );
     }
 

@@ -12,17 +12,24 @@ use PHPeek\LaravelQueueMetrics\Actions\CalculateJobMetricsAction;
 use PHPeek\LaravelQueueMetrics\Actions\RecordJobCompletionAction;
 use PHPeek\LaravelQueueMetrics\Actions\RecordJobFailureAction;
 use PHPeek\LaravelQueueMetrics\Actions\RecordJobStartAction;
+use PHPeek\LaravelQueueMetrics\Actions\RecordWorkerHeartbeatAction;
+use PHPeek\LaravelQueueMetrics\Actions\TransitionWorkerStateAction;
+use PHPeek\LaravelQueueMetrics\Console\DetectStaleWorkersCommand;
 use PHPeek\LaravelQueueMetrics\Listeners\JobFailedListener;
 use PHPeek\LaravelQueueMetrics\Listeners\JobProcessedListener;
 use PHPeek\LaravelQueueMetrics\Listeners\JobProcessingListener;
+use PHPeek\LaravelQueueMetrics\Contracts\QueueInspector;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\BaselineRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisBaselineRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisJobMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisQueueMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Repositories\RedisWorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisWorkerRepository;
+use PHPeek\LaravelQueueMetrics\Services\LaravelQueueInspector;
 use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
 use PHPeek\LaravelQueueMetrics\Utilities\PercentileCalculator;
 use Spatie\LaravelPackageTools\Package;
@@ -35,7 +42,8 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
         $package
             ->name('queue-metrics')
             ->hasConfigFile('queue-metrics')
-            ->hasRoute('api');
+            ->hasRoute('api')
+            ->hasCommand(DetectStaleWorkersCommand::class);
     }
 
     public function packageRegistered(): void
@@ -69,6 +77,17 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
             };
         });
 
+        $this->app->singleton(WorkerHeartbeatRepository::class, function ($app) {
+            return match (config('queue-metrics.storage.driver', 'redis')) {
+                'redis' => new RedisWorkerHeartbeatRepository(),
+                default => new RedisWorkerHeartbeatRepository(),
+            };
+        });
+
+        // Register services
+        $this->app->singleton(QueueInspector::class, LaravelQueueInspector::class);
+        $this->app->singleton(MetricsQueryService::class);
+
         // Register utilities
         $this->app->singleton(PercentileCalculator::class);
 
@@ -77,9 +96,8 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
         $this->app->singleton(RecordJobCompletionAction::class);
         $this->app->singleton(RecordJobFailureAction::class);
         $this->app->singleton(CalculateJobMetricsAction::class);
-
-        // Register services
-        $this->app->singleton(MetricsQueryService::class);
+        $this->app->singleton(RecordWorkerHeartbeatAction::class);
+        $this->app->singleton(TransitionWorkerStateAction::class);
     }
 
     public function packageBooted(): void

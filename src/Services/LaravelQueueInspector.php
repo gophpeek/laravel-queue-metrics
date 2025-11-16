@@ -80,20 +80,24 @@ final readonly class LaravelQueueInspector implements QueueInspector
         string $connection,
         string $queue,
     ): QueueDepthData {
-        $pendingJobs = method_exists($queueInstance, 'size')
-            ? $queueInstance->size($queue)
-            : 0;
+        $pendingJobs = 0;
+        if (is_object($queueInstance) && method_exists($queueInstance, 'size')) {
+            $size = $queueInstance->size($queue);
+            $pendingJobs = is_int($size) ? $size : 0;
+        }
 
         $reservedJobs = 0;
         $delayedJobs = 0;
 
         // Try to get reserved and delayed counts if methods exist
-        if (method_exists($queueInstance, 'sizeReserved')) {
-            $reservedJobs = $queueInstance->sizeReserved($queue);
+        if (is_object($queueInstance) && method_exists($queueInstance, 'sizeReserved')) {
+            $reserved = $queueInstance->sizeReserved($queue);
+            $reservedJobs = is_int($reserved) ? $reserved : 0;
         }
 
-        if (method_exists($queueInstance, 'sizeDelayed')) {
-            $delayedJobs = $queueInstance->sizeDelayed($queue);
+        if (is_object($queueInstance) && method_exists($queueInstance, 'sizeDelayed')) {
+            $delayed = $queueInstance->sizeDelayed($queue);
+            $delayedJobs = is_int($delayed) ? $delayed : 0;
         }
 
         // Try to get oldest job timestamps
@@ -126,6 +130,19 @@ final readonly class LaravelQueueInspector implements QueueInspector
         }
 
         // For other queue types, try reflection
+        if (! is_object($queueInstance)) {
+            return new QueueDepthData(
+                connection: $connection,
+                queue: $queue,
+                pendingJobs: 0,
+                reservedJobs: 0,
+                delayedJobs: 0,
+                oldestPendingJobAge: null,
+                oldestDelayedJobAge: null,
+                measuredAt: Carbon::now(),
+            );
+        }
+
         try {
             $reflection = new ReflectionClass($queueInstance);
 
@@ -137,7 +154,8 @@ final readonly class LaravelQueueInspector implements QueueInspector
             if ($reflection->hasMethod('size')) {
                 $method = $reflection->getMethod('size');
                 $method->setAccessible(true);
-                $pendingJobs = $method->invoke($queueInstance, $queue) ?? 0;
+                $size = $method->invoke($queueInstance, $queue);
+                $pendingJobs = is_int($size) ? $size : 0;
             }
 
             return new QueueDepthData(
@@ -179,26 +197,32 @@ final readonly class LaravelQueueInspector implements QueueInspector
             $redisProperty->setAccessible(true);
             $redis = $redisProperty->getValue($queue);
 
-            $prefix = config("queue.connections.{$connection}.prefix", 'queues');
+            $prefix = config("queue.connections.{$connection}.prefix");
+            if (! is_string($prefix)) {
+                $prefix = 'queues';
+            }
 
             // Get pending jobs count
             $pendingKey = "{$prefix}:{$queueName}";
-            $pendingJobs = $redis->llen($pendingKey) ?? 0;
+            $pendingCount = $redis->llen($pendingKey);
+            $pendingJobs = is_int($pendingCount) ? $pendingCount : 0;
 
             // Get reserved jobs count
             $reservedKey = "{$prefix}:{$queueName}:reserved";
-            $reservedJobs = $redis->zcard($reservedKey) ?? 0;
+            $reservedCount = $redis->zcard($reservedKey);
+            $reservedJobs = is_int($reservedCount) ? $reservedCount : 0;
 
             // Get delayed jobs count
             $delayedKey = "{$prefix}:{$queueName}:delayed";
-            $delayedJobs = $redis->zcard($delayedKey) ?? 0;
+            $delayedCount = $redis->zcard($delayedKey);
+            $delayedJobs = is_int($delayedCount) ? $delayedCount : 0;
 
             // Get oldest pending job timestamp
             $oldestPending = null;
             $oldestJob = $redis->lindex($pendingKey, 0);
-            if ($oldestJob) {
+            if (is_string($oldestJob)) {
                 $decoded = json_decode($oldestJob, true);
-                if (isset($decoded['pushedAt'])) {
+                if (is_array($decoded) && isset($decoded['pushedAt']) && is_numeric($decoded['pushedAt'])) {
                     $oldestPending = Carbon::createFromTimestamp((int) $decoded['pushedAt']);
                 }
             }
@@ -206,9 +230,11 @@ final readonly class LaravelQueueInspector implements QueueInspector
             // Get oldest delayed job timestamp
             $oldestDelayed = null;
             $oldestDelayedJobs = $redis->zrange($delayedKey, 0, 0, 'WITHSCORES');
-            if (! empty($oldestDelayedJobs)) {
-                $timestamp = (int) reset($oldestDelayedJobs);
-                $oldestDelayed = Carbon::createFromTimestamp($timestamp);
+            if (is_array($oldestDelayedJobs) && ! empty($oldestDelayedJobs)) {
+                $timestamp = reset($oldestDelayedJobs);
+                if (is_numeric($timestamp)) {
+                    $oldestDelayed = Carbon::createFromTimestamp((int) $timestamp);
+                }
             }
 
             return new QueueDepthData(
@@ -237,14 +263,15 @@ final readonly class LaravelQueueInspector implements QueueInspector
 
     /**
      * Try to get oldest job age from queue.
+     *
+     * This would require custom queue driver implementation or Laravel 11+ API.
+     * For now, return null and rely on Redis-specific implementation above.
      */
     private function getOldestJobAge(
         mixed $queueInstance,
         string $queue,
         string $type = 'pending',
-    ): ?Carbon {
-        // This would require custom queue driver implementation or Laravel 11+ API
-        // For now, return null and rely on Redis-specific implementation above
+    ): null {
         return null;
     }
 }

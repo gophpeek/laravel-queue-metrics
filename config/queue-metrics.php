@@ -127,4 +127,18 @@ return [
         'baseline_samples' => 100,        // Number of samples for baseline calculations
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Worker Heartbeat Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure worker heartbeat monitoring and stale worker detection.
+    |
+    */
+
+    'worker_heartbeat' => [
+        'stale_threshold' => env('QUEUE_METRICS_STALE_THRESHOLD', 60), // Seconds before worker considered stale
+        'auto_detect_schedule' => env('QUEUE_METRICS_AUTO_DETECT_SCHEDULE', '* * * * *'), // Cron expression for automatic detection
+    ],
+
 ];

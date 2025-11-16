@@ -27,19 +27,31 @@ final readonly class QueueDepthData
      */
     public static function fromArray(array $data): self
     {
+        $connection = $data['connection'] ?? '';
+        $queue = $data['queue'] ?? '';
+        $measuredAt = $data['measured_at'] ?? null;
+
+        if (! is_string($connection) || ! is_string($queue)) {
+            throw new \InvalidArgumentException('connection and queue must be strings');
+        }
+
+        if ($measuredAt === null) {
+            throw new \InvalidArgumentException('measured_at is required');
+        }
+
         return new self(
-            connection: $data['connection'],
-            queue: $data['queue'],
-            pendingJobs: (int) ($data['pending_jobs'] ?? 0),
-            reservedJobs: (int) ($data['reserved_jobs'] ?? 0),
-            delayedJobs: (int) ($data['delayed_jobs'] ?? 0),
-            oldestPendingJobAge: isset($data['oldest_pending_job_age'])
+            connection: $connection,
+            queue: $queue,
+            pendingJobs: is_numeric($data['pending_jobs'] ?? 0) ? (int) ($data['pending_jobs'] ?? 0) : 0,
+            reservedJobs: is_numeric($data['reserved_jobs'] ?? 0) ? (int) ($data['reserved_jobs'] ?? 0) : 0,
+            delayedJobs: is_numeric($data['delayed_jobs'] ?? 0) ? (int) ($data['delayed_jobs'] ?? 0) : 0,
+            oldestPendingJobAge: isset($data['oldest_pending_job_age']) && is_string($data['oldest_pending_job_age'])
                 ? Carbon::parse($data['oldest_pending_job_age'])
                 : null,
-            oldestDelayedJobAge: isset($data['oldest_delayed_job_age'])
+            oldestDelayedJobAge: isset($data['oldest_delayed_job_age']) && is_string($data['oldest_delayed_job_age'])
                 ? Carbon::parse($data['oldest_delayed_job_age'])
                 : null,
-            measuredAt: Carbon::parse($data['measured_at']),
+            measuredAt: is_string($measuredAt) ? Carbon::parse($measuredAt) : Carbon::now(),
         );
     }
 

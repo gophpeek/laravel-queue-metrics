@@ -6,6 +6,8 @@ namespace PHPeek\LaravelQueueMetrics\Listeners;
 
 use Illuminate\Queue\Events\JobFailed;
 use PHPeek\LaravelQueueMetrics\Actions\RecordJobFailureAction;
+use PHPeek\LaravelQueueMetrics\Actions\RecordWorkerHeartbeatAction;
+use PHPeek\LaravelQueueMetrics\Enums\WorkerState;
 
 /**
  * Listen for failed jobs.
@@ -14,6 +16,7 @@ final readonly class JobFailedListener
 {
     public function __construct(
         private RecordJobFailureAction $recordJobFailure,
+        private RecordWorkerHeartbeatAction $recordWorkerHeartbeat,
     ) {}
 
     public function handle(JobFailed $event): void
@@ -21,12 +24,35 @@ final readonly class JobFailedListener
         $job = $event->job;
         $payload = $job->payload();
 
+        $connection = $event->connectionName;
+        $queue = $job->getQueue() ?? 'default';
+
         $this->recordJobFailure->execute(
             jobId: $job->getJobId() ?? uniqid('job_', true),
             jobClass: $payload['displayName'] ?? 'UnknownJob',
-            connection: $event->connectionName,
-            queue: $job->getQueue() ?? 'default',
+            connection: $connection,
+            queue: $queue,
             exception: $event->exception,
+        );
+
+        // Record worker heartbeat with IDLE state (job failed, worker ready for next job)
+        $workerId = $this->getWorkerId();
+        $this->recordWorkerHeartbeat->execute(
+            workerId: $workerId,
+            connection: $connection,
+            queue: $queue,
+            state: WorkerState::IDLE,
+            currentJobId: null,
+            currentJobClass: null,
+        );
+    }
+
+    private function getWorkerId(): string
+    {
+        return sprintf(
+            'worker_%s_%d',
+            gethostname() ?: 'unknown',
+            getmypid()
         );
     }
 }

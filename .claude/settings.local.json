@@ -10,7 +10,10 @@
       "Bash(find:*)",
       "Bash(composer install:*)",
       "Bash(composer analyse:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(vendor/bin/pest:*)",
+      "Bash(git restore:*)",
+      "Bash(vendor/bin/phpstan analyse:*)"
     ],
     "deny": [],
     "ask": []

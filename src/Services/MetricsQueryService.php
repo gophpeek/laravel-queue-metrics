@@ -6,12 +6,16 @@ namespace PHPeek\LaravelQueueMetrics\Services;
 
 use Illuminate\Support\Collection;
 use PHPeek\LaravelQueueMetrics\Actions\CalculateJobMetricsAction;
+use PHPeek\LaravelQueueMetrics\Contracts\QueueInspector;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\BaselineData;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\JobMetricsData;
+use PHPeek\LaravelQueueMetrics\DataTransferObjects\QueueDepthData;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\QueueMetricsData;
+use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerHeartbeat;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerStatsData;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\BaselineRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerRepository;
 
 /**
@@ -24,6 +28,8 @@ final readonly class MetricsQueryService
         private QueueMetricsRepository $queueMetricsRepository,
         private WorkerRepository $workerRepository,
         private BaselineRepository $baselineRepository,
+        private WorkerHeartbeatRepository $workerHeartbeatRepository,
+        private QueueInspector $queueInspector,
     ) {}
 
     public function getJobMetrics(
@@ -100,5 +106,42 @@ final readonly class MetricsQueryService
             'status' => 'healthy',
             'timestamp' => time(),
         ];
+    }
+
+    public function getQueueDepth(
+        string $connection = 'default',
+        string $queue = 'default',
+    ): QueueDepthData {
+        return $this->queueInspector->getQueueDepth($connection, $queue);
+    }
+
+    /**
+     * @return array<string>
+     */
+    public function getAllQueues(): array
+    {
+        return $this->queueInspector->getAllQueues();
+    }
+
+    /**
+     * @return Collection<int, WorkerHeartbeat>
+     */
+    public function getWorkerHeartbeats(
+        ?string $connection = null,
+        ?string $queue = null,
+    ): Collection {
+        $workers = $this->workerHeartbeatRepository->getActiveWorkers($connection, $queue);
+
+        return collect($workers);
+    }
+
+    public function getWorkerHeartbeat(string $workerId): ?WorkerHeartbeat
+    {
+        return $this->workerHeartbeatRepository->getWorker($workerId);
+    }
+
+    public function detectStaledWorkers(int $thresholdSeconds = 60): int
+    {
+        return $this->workerHeartbeatRepository->detectStaledWorkers($thresholdSeconds);
     }
 }

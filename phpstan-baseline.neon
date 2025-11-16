@@ -247,6 +247,48 @@ parameters:
 			path: src/Facades/QueueMetrics.php
 
 		-
+			message: '#^Offset ''health_score'' on array\{total_queues\: int, total_jobs_processed\: int, total_jobs_failed\: int, total_active_workers\: int, health_score\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Http/Controllers/PrometheusController.php
+
+		-
+			message: '#^Offset ''total_active_workers'' on array\{total_queues\: int, total_jobs_processed\: int, total_jobs_failed\: int, total_active_workers\: int, health_score\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Http/Controllers/PrometheusController.php
+
+		-
+			message: '#^Offset ''total_jobs_failed'' on array\{total_queues\: int, total_jobs_processed\: int, total_jobs_failed\: int, total_active_workers\: int, health_score\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Http/Controllers/PrometheusController.php
+
+		-
+			message: '#^Offset ''total_jobs_processed'' on array\{total_queues\: int, total_jobs_processed\: int, total_jobs_failed\: int, total_active_workers\: int, health_score\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Http/Controllers/PrometheusController.php
+
+		-
+			message: '#^Offset ''total_queues'' on array\{total_queues\: int, total_jobs_processed\: int, total_jobs_failed\: int, total_active_workers\: int, health_score\: float\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Http/Controllers/PrometheusController.php
+
+		-
+			message: '#^Static method Spatie\\Prometheus\\Facades\\Prometheus\:\:addCounter\(\) invoked with 5 parameters, 1 required\.$#'
+			identifier: arguments.count
+			count: 2
+			path: src/Http/Controllers/PrometheusController.php
+
+		-
+			message: '#^Static method Spatie\\Prometheus\\Facades\\Prometheus\:\:addGauge\(\) invoked with 5 parameters, 1 required\.$#'
+			identifier: arguments.count
+			count: 3
+			path: src/Http/Controllers/PrometheusController.php
+
+		-
 			message: '#^Expression on left side of \?\? is not nullable\.$#'
 			identifier: nullCoalesce.expr
 			count: 2
@@ -283,12 +325,6 @@ parameters:
 			path: src/Repositories/RedisBaselineRepository.php
 
 		-
-			message: '#^Parameter \#1 \$name of static method Illuminate\\Redis\\RedisManager\:\:connection\(\) expects string\|UnitEnum\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Repositories/RedisBaselineRepository.php
-
-		-
 			message: '#^Parameter \#2 \$pattern of method Redis\:\:scan\(\) expects string\|null, array\<string, int\|string\> given\.$#'
 			identifier: argument.type
 			count: 1
@@ -315,7 +351,7 @@ parameters:
 		-
 			message: '#^Invalid array key type float\.$#'
 			identifier: array.invalidKey
-			count: 2
+			count: 3
 			path: src/Repositories/RedisJobMetricsRepository.php
 
 		-
@@ -328,12 +364,6 @@ parameters:
 			message: '#^Method Redis\:\:pipeline\(\) invoked with 1 parameter, 0 required\.$#'
 			identifier: arguments.count
 			count: 2
-			path: src/Repositories/RedisJobMetricsRepository.php
-
-		-
-			message: '#^Parameter \#1 \$name of static method Illuminate\\Redis\\RedisManager\:\:connection\(\) expects string\|UnitEnum\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
 			path: src/Repositories/RedisJobMetricsRepository.php
 
 		-
@@ -379,12 +409,6 @@ parameters:
 			path: src/Repositories/RedisQueueMetricsRepository.php
 
 		-
-			message: '#^Parameter \#1 \$name of static method Illuminate\\Redis\\RedisManager\:\:connection\(\) expects string\|UnitEnum\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Repositories/RedisQueueMetricsRepository.php
-
-		-
 			message: '#^Parameter \#2 \$pattern of method Redis\:\:scan\(\) expects string\|null, array\<string, int\|string\> given\.$#'
 			identifier: argument.type
 			count: 1
@@ -395,6 +419,30 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: src/Repositories/RedisQueueMetricsRepository.php
+
+		-
+			message: '#^Cannot cast mixed to int\.$#'
+			identifier: cast.int
+			count: 1
+			path: src/Repositories/RedisWorkerHeartbeatRepository.php
+
+		-
+			message: '#^Method PHPeek\\LaravelQueueMetrics\\Repositories\\RedisWorkerHeartbeatRepository\:\:getPrefix\(\) should return string but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repositories/RedisWorkerHeartbeatRepository.php
+
+		-
+			message: '#^Method Redis\:\:pipeline\(\) invoked with 1 parameter, 0 required\.$#'
+			identifier: arguments.count
+			count: 2
+			path: src/Repositories/RedisWorkerHeartbeatRepository.php
+
+		-
+			message: '#^Parameter \#2 \$pattern of method Redis\:\:scan\(\) expects string\|null, array\<string, int\|string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Repositories/RedisWorkerHeartbeatRepository.php
 
 		-
 			message: '#^Binary operation "\-" between float\|int\|string and int results in an error\.$#'
@@ -415,12 +463,6 @@ parameters:
 			path: src/Repositories/RedisWorkerRepository.php
 
 		-
-			message: '#^Parameter \#1 \$name of static method Illuminate\\Redis\\RedisManager\:\:connection\(\) expects string\|UnitEnum\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Repositories/RedisWorkerRepository.php
-
-		-
 			message: '#^Parameter \#2 \$pattern of method Redis\:\:scan\(\) expects string\|null, array\<string, int\|string\> given\.$#'
 			identifier: argument.type
 			count: 1
@@ -431,3 +473,63 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: src/Repositories/RedisWorkerRepository.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 2
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Illuminate\\Contracts\\Queue\\Queue and ''size'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Cannot access offset ''queue'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Cannot access offset ''queues'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Cannot call method lindex\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Cannot call method llen\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Cannot call method zcard\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Cannot call method zrange\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Method PHPeek\\LaravelQueueMetrics\\Services\\LaravelQueueInspector\:\:getAllQueues\(\) should return array\<string\> but returns list\<mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Services/LaravelQueueInspector.php
+
+		-
+			message: '#^Parameter \#2 \$string of function explode expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Services/LaravelQueueInspector.php

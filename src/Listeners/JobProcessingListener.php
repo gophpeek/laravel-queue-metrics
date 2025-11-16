@@ -6,6 +6,8 @@ namespace PHPeek\LaravelQueueMetrics\Listeners;
 
 use Illuminate\Queue\Events\JobProcessing;
 use PHPeek\LaravelQueueMetrics\Actions\RecordJobStartAction;
+use PHPeek\LaravelQueueMetrics\Actions\RecordWorkerHeartbeatAction;
+use PHPeek\LaravelQueueMetrics\Enums\WorkerState;
 use PHPeek\SystemMetrics\ProcessMetrics;
 
 /**
@@ -15,6 +17,7 @@ final readonly class JobProcessingListener
 {
     public function __construct(
         private RecordJobStartAction $recordJobStart,
+        private RecordWorkerHeartbeatAction $recordWorkerHeartbeat,
     ) {}
 
     public function handle(JobProcessing $event): void
@@ -24,17 +27,44 @@ final readonly class JobProcessingListener
         $jobId = $job->getJobId() ?? uniqid('job_', true);
 
         // Start tracking process metrics for this job
-        ProcessMetrics::start(
-            pid: getmypid(),
-            trackerId: "job_{$jobId}",
-            includeChildren: false
-        );
+        $pid = getmypid();
+        if ($pid !== false) {
+            ProcessMetrics::start(
+                pid: $pid,
+                trackerId: "job_{$jobId}",
+                includeChildren: false
+            );
+        }
+
+        $jobClass = $payload['displayName'] ?? 'UnknownJob';
+        $connection = $event->connectionName;
+        $queue = $job->getQueue() ?? 'default';
 
         $this->recordJobStart->execute(
             jobId: $jobId,
-            jobClass: $payload['displayName'] ?? 'UnknownJob',
-            connection: $event->connectionName,
-            queue: $job->getQueue() ?? 'default',
+            jobClass: $jobClass,
+            connection: $connection,
+            queue: $queue,
+        );
+
+        // Record worker heartbeat with BUSY state
+        $workerId = $this->getWorkerId();
+        $this->recordWorkerHeartbeat->execute(
+            workerId: $workerId,
+            connection: $connection,
+            queue: $queue,
+            state: WorkerState::BUSY,
+            currentJobId: $jobId,
+            currentJobClass: $jobClass,
+        );
+    }
+
+    private function getWorkerId(): string
+    {
+        return sprintf(
+            'worker_%s_%d',
+            gethostname() ?: 'unknown',
+            getmypid()
         );
     }
 }

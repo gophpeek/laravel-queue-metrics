@@ -15,6 +15,9 @@ trait InteractsWithRedis
     protected function getRedis(): Connection
     {
         $connection = config('queue-metrics.storage.redis.connection', 'default');
+        if (! is_string($connection)) {
+            $connection = 'default';
+        }
 
         /** @var Connection */
         return Redis::connection($connection);
