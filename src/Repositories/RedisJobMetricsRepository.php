@@ -25,21 +25,20 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
         string $queue,
         Carbon $startedAt,
     ): void {
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
         $metricsKey = $this->redis->key('jobs', $connection, $queue, $jobClass);
         $jobKey = $this->redis->key('job', $jobId);
 
         // Increment total queued counter
-        $redis->hincrby($metricsKey, 'total_queued', 1);
+        $driver->incrementHashField($metricsKey, 'total_queued', 1);
 
         // Store job start time
-        $redis->hmset($jobKey, [
+        $driver->setHash($jobKey, [
             'job_class' => $jobClass,
             'connection' => $connection,
             'queue' => $queue,
             'started_at' => $startedAt->timestamp,
-        ]);
-        $redis->expire($jobKey, $this->redis->getTtl('raw'));
+        ], $this->redis->getTtl('raw'));
     }
 
     public function recordCompletion(
@@ -52,14 +51,15 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
         float $cpuTimeMs,
         Carbon $completedAt,
     ): void {
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
         $metricsKey = $this->redis->key('jobs', $connection, $queue, $jobClass);
         $durationKey = $this->redis->key('durations', $connection, $queue, $jobClass);
         $memoryKey = $this->redis->key('memory', $connection, $queue, $jobClass);
         $cpuKey = $this->redis->key('cpu', $connection, $queue, $jobClass);
+        $ttl = $this->redis->getTtl('raw');
 
-        // Increment counters atomically
-        $redis->pipeline(function ($pipe) use (
+        // Increment counters and store samples atomically
+        $driver->pipeline(function ($pipe) use (
             $metricsKey,
             $durationKey,
             $memoryKey,
@@ -67,34 +67,32 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
             $durationMs,
             $memoryMb,
             $cpuTimeMs,
-            $completedAt
+            $completedAt,
+            $ttl
         ) {
-            $pipe->hincrby($metricsKey, 'total_processed', 1);
-            $pipe->hincrbyfloat($metricsKey, 'total_duration_ms', $durationMs);
-            $pipe->hincrbyfloat($metricsKey, 'total_memory_mb', $memoryMb);
-            $pipe->hincrbyfloat($metricsKey, 'total_cpu_time_ms', $cpuTimeMs);
-            $pipe->hset($metricsKey, 'last_processed_at', $completedAt->timestamp);
+            $pipe->incrementHashField($metricsKey, 'total_processed', 1);
+            $pipe->incrementHashField($metricsKey, 'total_duration_ms', $durationMs);
+            $pipe->incrementHashField($metricsKey, 'total_memory_mb', $memoryMb);
+            $pipe->incrementHashField($metricsKey, 'total_cpu_time_ms', $cpuTimeMs);
+            $pipe->setHash($metricsKey, ['last_processed_at' => $completedAt->timestamp]);
 
             // Store duration sample (sorted set with timestamp as score)
-            $pipe->zadd($durationKey, [(string) $durationMs => $completedAt->timestamp]);
-            $pipe->expire($durationKey, $this->redis->getTtl('raw'));
+            $pipe->addToSortedSet($durationKey, [(string) $durationMs => $completedAt->timestamp], $ttl);
 
             // Store memory sample
-            $pipe->zadd($memoryKey, [(string) $memoryMb => $completedAt->timestamp]);
-            $pipe->expire($memoryKey, $this->redis->getTtl('raw'));
+            $pipe->addToSortedSet($memoryKey, [(string) $memoryMb => $completedAt->timestamp], $ttl);
 
             // Store CPU time sample
-            $pipe->zadd($cpuKey, [(string) $cpuTimeMs => $completedAt->timestamp]);
-            $pipe->expire($cpuKey, $this->redis->getTtl('raw'));
+            $pipe->addToSortedSet($cpuKey, [(string) $cpuTimeMs => $completedAt->timestamp], $ttl);
 
             // Keep only recent samples (limit to 10000)
-            $pipe->zremrangebyrank($durationKey, 0, -10001);
-            $pipe->zremrangebyrank($memoryKey, 0, -10001);
-            $pipe->zremrangebyrank($cpuKey, 0, -10001);
+            $pipe->removeSortedSetByRank($durationKey, 0, -10001);
+            $pipe->removeSortedSetByRank($memoryKey, 0, -10001);
+            $pipe->removeSortedSetByRank($cpuKey, 0, -10001);
         });
 
         // Clean up job tracking key
-        $redis->del($this->redis->key('job', $jobId));
+        $driver->delete($this->redis->key('job', $jobId));
     }
 
     public function recordFailure(
@@ -105,17 +103,19 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
         string $exception,
         Carbon $failedAt,
     ): void {
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
         $metricsKey = $this->redis->key('jobs', $connection, $queue, $jobClass);
 
-        $redis->pipeline(function ($pipe) use ($metricsKey, $exception, $failedAt) {
-            $pipe->hincrby($metricsKey, 'total_failed', 1);
-            $pipe->hset($metricsKey, 'last_failed_at', $failedAt->timestamp);
-            $pipe->hset($metricsKey, 'last_exception', substr($exception, 0, 1000));
+        $driver->pipeline(function ($pipe) use ($metricsKey, $exception, $failedAt) {
+            $pipe->incrementHashField($metricsKey, 'total_failed', 1);
+            $pipe->setHash($metricsKey, [
+                'last_failed_at' => $failedAt->timestamp,
+                'last_exception' => substr($exception, 0, 1000),
+            ]);
         });
 
         // Clean up job tracking key
-        $redis->del($this->redis->key('job', $jobId));
+        $driver->delete($this->redis->key('job', $jobId));
     }
 
     /**
@@ -127,10 +127,10 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
         string $queue,
     ): array {
         $key = $this->redis->key('jobs', $connection, $queue, $jobClass);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         /** @var array<string, string> */
-        $data = $redis->hgetall($key) ?: [];
+        $data = $driver->getHash($key) ?: [];
 
         return [
             'total_processed' => (int) ($data['total_processed'] ?? 0),
@@ -158,13 +158,13 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
         int $limit = 1000,
     ): array {
         $key = $this->redis->key('durations', $connection, $queue, $jobClass);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
-        // Get most recent samples
+        // Get most recent samples (reverse order, so use negative indices)
         /** @var array<string> */
-        $samples = $redis->zrevrange($key, 0, $limit - 1);
+        $samples = $driver->getSortedSetByRank($key, -$limit, -1);
 
-        return array_map('floatval', $samples);
+        return array_map('floatval', array_reverse($samples));
     }
 
     /**
@@ -177,12 +177,12 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
         int $limit = 1000,
     ): array {
         $key = $this->redis->key('memory', $connection, $queue, $jobClass);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         /** @var array<string> */
-        $samples = $redis->zrevrange($key, 0, $limit - 1);
+        $samples = $driver->getSortedSetByRank($key, -$limit, -1);
 
-        return array_map('floatval', $samples);
+        return array_map('floatval', array_reverse($samples));
     }
 
     /**
@@ -195,12 +195,12 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
         int $limit = 1000,
     ): array {
         $key = $this->redis->key('cpu', $connection, $queue, $jobClass);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         /** @var array<string> */
-        $samples = $redis->zrevrange($key, 0, $limit - 1);
+        $samples = $driver->getSortedSetByRank($key, -$limit, -1);
 
-        return array_map('floatval', $samples);
+        return array_map('floatval', array_reverse($samples));
     }
 
     public function getThroughput(
@@ -210,23 +210,94 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
         int $windowSeconds,
     ): int {
         $key = $this->redis->key('durations', $connection, $queue, $jobClass);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         $cutoff = Carbon::now()->subSeconds($windowSeconds)->timestamp;
 
         // Count samples within time window
-        return (int) $redis->zcount($key, (string) $cutoff, '+inf');
+        return $driver->countSortedSetByScore($key, (string) $cutoff, '+inf');
+    }
+
+    public function recordQueuedAt(
+        string $jobClass,
+        string $connection,
+        string $queue,
+        Carbon $queuedAt,
+    ): void {
+        // Implementation for tracking when jobs are queued
+        $key = $this->redis->key('queued', $connection, $queue, $jobClass);
+        $driver = $this->redis->driver();
+
+        // Store timestamp as sorted set for time-to-start calculations
+        $driver->addToSortedSet($key, [(string) $queuedAt->timestamp => $queuedAt->timestamp], $this->redis->getTtl('raw'));
+    }
+
+    public function recordRetryRequested(
+        string $jobId,
+        string $jobClass,
+        string $connection,
+        string $queue,
+        Carbon $retryRequestedAt,
+        int $attemptNumber,
+    ): void {
+        $driver = $this->redis->driver();
+        $metricsKey = $this->redis->key('jobs', $connection, $queue, $jobClass);
+        $retryKey = $this->redis->key('retries', $connection, $queue, $jobClass);
+
+        // Increment retry counter
+        $driver->incrementHashField($metricsKey, 'total_retries', 1);
+
+        // Store retry event for pattern analysis
+        $driver->addToSortedSet($retryKey, [
+            json_encode(['job_id' => $jobId, 'attempt' => $attemptNumber], JSON_THROW_ON_ERROR) => $retryRequestedAt->timestamp,
+        ], $this->redis->getTtl('raw'));
+    }
+
+    public function recordTimeout(
+        string $jobId,
+        string $jobClass,
+        string $connection,
+        string $queue,
+        Carbon $timedOutAt,
+    ): void {
+        $driver = $this->redis->driver();
+        $metricsKey = $this->redis->key('jobs', $connection, $queue, $jobClass);
+
+        // Increment timeout counter
+        $driver->incrementHashField($metricsKey, 'total_timeouts', 1);
+        $driver->setHash($metricsKey, ['last_timeout_at' => $timedOutAt->timestamp]);
+    }
+
+    public function recordException(
+        string $jobId,
+        string $jobClass,
+        string $connection,
+        string $queue,
+        string $exceptionClass,
+        string $exceptionMessage,
+        Carbon $occurredAt,
+    ): void {
+        $driver = $this->redis->driver();
+        $metricsKey = $this->redis->key('jobs', $connection, $queue, $jobClass);
+        $exceptionsKey = $this->redis->key('exceptions', $connection, $queue, $jobClass);
+
+        // Increment exception counter
+        $driver->incrementHashField($metricsKey, 'total_exceptions', 1);
+
+        // Track exception types
+        $driver->incrementHashField($exceptionsKey, $exceptionClass, 1);
+        $driver->expire($exceptionsKey, $this->redis->getTtl('aggregated'));
     }
 
     public function cleanup(int $olderThanSeconds): int
     {
         $pattern = $this->redis->key('jobs', '*');
         $keys = $this->scanKeys($pattern);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
         $deleted = 0;
 
         foreach ($keys as $key) {
-            $lastProcessed = $redis->hget($key, 'last_processed_at');
+            $lastProcessed = $driver->getHashField($key, 'last_processed_at');
 
             if ($lastProcessed === null || $lastProcessed === false) {
                 continue;
@@ -236,7 +307,7 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
             $age = Carbon::now()->timestamp - $lastProcessedInt;
 
             if ($age > $olderThanSeconds) {
-                $redis->del($key);
+                $driver->delete($key);
                 $deleted++;
             }
         }
@@ -249,17 +320,6 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
      */
     private function scanKeys(string $pattern): array
     {
-        $redis = $this->redis->getConnection();
-        $keys = [];
-        $cursor = '0';
-
-        do {
-            /** @var array{0: string, 1: array<string>} */
-            $result = $redis->scan($cursor, ['match' => $pattern, 'count' => 100]);
-            [$cursor, $found] = $result;
-            $keys = array_merge($keys, $found);
-        } while ($cursor !== '0');
-
-        return $keys;
+        return $this->redis->driver()->scanKeys($pattern);
     }
 }

@@ -21,9 +21,9 @@ final readonly class RedisBaselineRepository implements BaselineRepository
     public function storeBaseline(BaselineData $baseline): void
     {
         $key = $this->redis->key('baseline', $baseline->connection, $baseline->queue);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
-        $redis->hmset($key, [
+        $driver->setHash($key, [
             'connection' => $baseline->connection,
             'queue' => $baseline->queue,
             'cpu_percent_per_job' => (string) $baseline->cpuPercentPerJob,
@@ -32,17 +32,16 @@ final readonly class RedisBaselineRepository implements BaselineRepository
             'sample_count' => $baseline->sampleCount,
             'confidence_score' => (string) $baseline->confidenceScore,
             'calculated_at' => $baseline->calculatedAt->timestamp,
-        ]);
-        $redis->expire($key, $this->redis->getTtl('baseline'));
+        ], $this->redis->getTtl('baseline'));
     }
 
     public function getBaseline(string $connection, string $queue): ?BaselineData
     {
         $key = $this->redis->key('baseline', $connection, $queue);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         /** @var array<string, string> */
-        $data = $redis->hgetall($key) ?: [];
+        $data = $driver->getHash($key) ?: [];
 
         if (empty($data)) {
             return null;
@@ -81,18 +80,18 @@ final readonly class RedisBaselineRepository implements BaselineRepository
     public function deleteBaseline(string $connection, string $queue): void
     {
         $key = $this->redis->key('baseline', $connection, $queue);
-        $this->redis->getConnection()->del($key);
+        $this->redis->driver()->delete($key);
     }
 
     public function cleanup(int $olderThanSeconds): int
     {
         $pattern = $this->redis->key('baseline', '*', '*');
         $keys = $this->scanKeys($pattern);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
         $deleted = 0;
 
         foreach ($keys as $key) {
-            $calculatedAt = $redis->hget($key, 'calculated_at');
+            $calculatedAt = $driver->getHashField($key, 'calculated_at');
 
             if ($calculatedAt === null || $calculatedAt === false) {
                 continue;
@@ -102,7 +101,7 @@ final readonly class RedisBaselineRepository implements BaselineRepository
             $age = Carbon::now()->timestamp - $calculatedAtInt;
 
             if ($age > $olderThanSeconds) {
-                $redis->del($key);
+                $driver->delete($key);
                 $deleted++;
             }
         }
@@ -115,17 +114,6 @@ final readonly class RedisBaselineRepository implements BaselineRepository
      */
     private function scanKeys(string $pattern): array
     {
-        $redis = $this->redis->getConnection();
-        $keys = [];
-        $cursor = '0';
-
-        do {
-            /** @var array{0: string, 1: array<string>} */
-            $result = $redis->scan($cursor, ['match' => $pattern, 'count' => 100]);
-            [$cursor, $found] = $result;
-            $keys = array_merge($keys, $found);
-        } while ($cursor !== '0');
-
-        return $keys;
+        return $this->redis->driver()->scanKeys($pattern);
     }
 }

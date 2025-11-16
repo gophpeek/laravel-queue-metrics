@@ -26,9 +26,9 @@ final readonly class RedisWorkerRepository implements WorkerRepository
         Carbon $spawnedAt,
     ): void {
         $key = $this->redis->key('worker', (string) $pid);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
-        $redis->hmset($key, [
+        $driver->setHash($key, [
             'pid' => $pid,
             'hostname' => $hostname,
             'connection' => $connection,
@@ -40,7 +40,7 @@ final readonly class RedisWorkerRepository implements WorkerRepository
         ]);
 
         // Add to active workers set
-        $redis->sadd($this->redis->key('active_workers'), [(string) $pid]);
+        $driver->addToSet($this->redis->key('active_workers'), [(string) $pid]);
     }
 
     public function updateWorkerActivity(
@@ -51,7 +51,7 @@ final readonly class RedisWorkerRepository implements WorkerRepository
         float $idlePercentage = 0.0,
     ): void {
         $key = $this->redis->key('worker', (string) $pid);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         $updates = [
             'status' => $status,
@@ -63,32 +63,32 @@ final readonly class RedisWorkerRepository implements WorkerRepository
         }
 
         if ($jobsProcessed > 0) {
-            $redis->hincrby($key, 'jobs_processed', $jobsProcessed);
+            $driver->incrementHashField($key, 'jobs_processed', $jobsProcessed);
         }
 
         if ($idlePercentage > 0.0) {
             $updates['idle_percentage'] = (string) $idlePercentage;
         }
 
-        $redis->hmset($key, $updates);
+        $driver->setHash($key, $updates);
     }
 
     public function unregisterWorker(int $pid): void
     {
         $key = $this->redis->key('worker', (string) $pid);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
-        $redis->del($key);
-        $redis->srem($this->redis->key('active_workers'), [(string) $pid]);
+        $driver->delete($key);
+        $driver->removeFromSet($this->redis->key('active_workers'), [(string) $pid]);
     }
 
     public function getWorkerStats(int $pid): ?WorkerStatsData
     {
         $key = $this->redis->key('worker', (string) $pid);
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         /** @var array<string, string> */
-        $data = $redis->hgetall($key) ?: [];
+        $data = $driver->getHash($key) ?: [];
 
         if (empty($data)) {
             return null;
@@ -114,10 +114,10 @@ final readonly class RedisWorkerRepository implements WorkerRepository
      */
     public function getActiveWorkers(?string $connection = null, ?string $queue = null): array
     {
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         /** @var array<string> */
-        $pids = $redis->smembers($this->redis->key('active_workers'));
+        $pids = $driver->getSetMembers($this->redis->key('active_workers'));
 
         $workers = [];
         foreach ($pids as $pid) {
@@ -151,15 +151,15 @@ final readonly class RedisWorkerRepository implements WorkerRepository
 
     public function cleanupStaleWorkers(int $olderThanSeconds): int
     {
-        $redis = $this->redis->getConnection();
+        $driver = $this->redis->driver();
 
         /** @var array<string> */
-        $pids = $redis->smembers($this->redis->key('active_workers'));
+        $pids = $driver->getSetMembers($this->redis->key('active_workers'));
         $deleted = 0;
 
         foreach ($pids as $pid) {
             $key = $this->redis->key('worker', $pid);
-            $lastActivity = $redis->hget($key, 'last_activity');
+            $lastActivity = $driver->getHashField($key, 'last_activity');
 
             if ($lastActivity === null || $lastActivity === false) {
                 $this->unregisterWorker((int) $pid);
