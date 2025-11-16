@@ -30,7 +30,7 @@ final readonly class PrometheusController
         // Register gauges
         Prometheus::addGauge(
             'queues_total',
-            (float) ($overview['total_queues'] ?? 0),
+            (float) $overview['total_queues'],
             null,
             $namespace,
             'Total number of queues'
@@ -38,7 +38,7 @@ final readonly class PrometheusController
 
         Prometheus::addCounter(
             'jobs_processed_total',
-            (int) ($overview['total_jobs_processed'] ?? 0),
+            (int) $overview['total_jobs_processed'],
             null,
             $namespace,
             'Total number of jobs processed'
@@ -46,7 +46,7 @@ final readonly class PrometheusController
 
         Prometheus::addCounter(
             'jobs_failed_total',
-            (int) ($overview['total_jobs_failed'] ?? 0),
+            (int) $overview['total_jobs_failed'],
             null,
             $namespace,
             'Total number of jobs failed'
@@ -54,7 +54,7 @@ final readonly class PrometheusController
 
         Prometheus::addGauge(
             'workers_active',
-            (float) ($overview['total_active_workers'] ?? 0),
+            (float) $overview['total_active_workers'],
             null,
             $namespace,
             'Number of active workers'
@@ -62,7 +62,7 @@ final readonly class PrometheusController
 
         Prometheus::addGauge(
             'health_score',
-            (float) ($overview['health_score'] ?? 100),
+            (float) $overview['health_score'],
             null,
             $namespace,
             'Overall health score (0-100)'
@@ -72,8 +72,8 @@ final readonly class PrometheusController
         $serverMetrics = $this->serverMetrics->getCurrentMetrics();
 
         if ($serverMetrics['available']) {
-            // Type-safe extraction
-            /** @var array{usage_percent: float, load_average: array{1min: float, 5min: float, 15min: float}} $cpu */
+            // Type-safe extraction with proper PHPDoc syntax for string keys
+            /** @var array{usage_percent: float, load_average: array{'1min': float, '5min': float, '15min': float}} $cpu */
             $cpu = $serverMetrics['cpu'];
             /** @var array{usage_percent: float, used_bytes: int, total_bytes: int} $memory */
             $memory = $serverMetrics['memory'];
