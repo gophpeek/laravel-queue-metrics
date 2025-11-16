@@ -6,21 +6,24 @@ namespace PHPeek\LaravelQueueMetrics\Repositories;
 
 use Carbon\Carbon;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\BaselineData;
-use PHPeek\LaravelQueueMetrics\Repositories\Concerns\InteractsWithRedis;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\BaselineRepository;
+use PHPeek\LaravelQueueMetrics\Services\RedisConnectionManager;
 
 /**
  * Redis-based implementation of baseline repository.
  */
-final class RedisBaselineRepository implements BaselineRepository
+final readonly class RedisBaselineRepository implements BaselineRepository
 {
-    use InteractsWithRedis;
+    public function __construct(
+        private RedisConnectionManager $redis,
+    ) {}
 
     public function storeBaseline(BaselineData $baseline): void
     {
-        $key = $this->key('baseline', $baseline->connection, $baseline->queue);
+        $key = $this->redis->key('baseline', $baseline->connection, $baseline->queue);
+        $redis = $this->redis->getConnection();
 
-        $this->hmset($key, [
+        $redis->hmset($key, [
             'connection' => $baseline->connection,
             'queue' => $baseline->queue,
             'cpu_percent_per_job' => (string) $baseline->cpuPercentPerJob,
@@ -29,13 +32,17 @@ final class RedisBaselineRepository implements BaselineRepository
             'sample_count' => $baseline->sampleCount,
             'confidence_score' => (string) $baseline->confidenceScore,
             'calculated_at' => $baseline->calculatedAt->timestamp,
-        ], $this->getTtl('baseline'));
+        ]);
+        $redis->expire($key, $this->redis->getTtl('baseline'));
     }
 
     public function getBaseline(string $connection, string $queue): ?BaselineData
     {
-        $key = $this->key('baseline', $connection, $queue);
-        $data = $this->hgetall($key);
+        $key = $this->redis->key('baseline', $connection, $queue);
+        $redis = $this->redis->getConnection();
+
+        /** @var array<string, string> */
+        $data = $redis->hgetall($key) ?: [];
 
         if (empty($data)) {
             return null;
@@ -73,18 +80,19 @@ final class RedisBaselineRepository implements BaselineRepository
 
     public function deleteBaseline(string $connection, string $queue): void
     {
-        $key = $this->key('baseline', $connection, $queue);
-        $this->getRedis()->del($key);
+        $key = $this->redis->key('baseline', $connection, $queue);
+        $this->redis->getConnection()->del($key);
     }
 
     public function cleanup(int $olderThanSeconds): int
     {
-        $pattern = $this->key('baseline', '*', '*');
+        $pattern = $this->redis->key('baseline', '*', '*');
         $keys = $this->scanKeys($pattern);
+        $redis = $this->redis->getConnection();
         $deleted = 0;
 
         foreach ($keys as $key) {
-            $calculatedAt = $this->getRedis()->hget($key, 'calculated_at');
+            $calculatedAt = $redis->hget($key, 'calculated_at');
 
             if ($calculatedAt === null || $calculatedAt === false) {
                 continue;
@@ -93,11 +101,30 @@ final class RedisBaselineRepository implements BaselineRepository
             $age = Carbon::now()->timestamp - (int) $calculatedAt;
 
             if ($age > $olderThanSeconds) {
-                $this->getRedis()->del($key);
+                $redis->del($key);
                 $deleted++;
             }
         }
 
         return $deleted;
+    }
+
+    /**
+     * @return array<string>
+     */
+    private function scanKeys(string $pattern): array
+    {
+        $redis = $this->redis->getConnection();
+        $keys = [];
+        $cursor = '0';
+
+        do {
+            /** @var array{0: string, 1: array<string>} */
+            $result = $redis->scan($cursor, ['match' => $pattern, 'count' => 100]);
+            [$cursor, $found] = $result;
+            $keys = array_merge($keys, $found);
+        } while ($cursor !== '0');
+
+        return $keys;
     }
 }

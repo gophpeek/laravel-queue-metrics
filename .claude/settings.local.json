@@ -13,7 +13,9 @@
       "Bash(git add:*)",
       "Bash(vendor/bin/pest:*)",
       "Bash(git restore:*)",
-      "Bash(vendor/bin/phpstan analyse:*)"
+      "Bash(vendor/bin/phpstan analyse:*)",
+      "mcp__serena__list_dir",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

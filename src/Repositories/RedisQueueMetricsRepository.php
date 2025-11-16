@@ -6,15 +6,17 @@ namespace PHPeek\LaravelQueueMetrics\Repositories;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Queue;
-use PHPeek\LaravelQueueMetrics\Repositories\Concerns\InteractsWithRedis;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Services\RedisConnectionManager;
 
 /**
  * Redis-based implementation of queue metrics repository.
  */
-final class RedisQueueMetricsRepository implements QueueMetricsRepository
+final readonly class RedisQueueMetricsRepository implements QueueMetricsRepository
 {
-    use InteractsWithRedis;
+    public function __construct(
+        private RedisConnectionManager $redis,
+    ) {}
 
     /**
      * @return array{depth: int, pending: int, scheduled: int, reserved: int, oldest_job_age: int}
@@ -47,22 +49,23 @@ final class RedisQueueMetricsRepository implements QueueMetricsRepository
         string $queue,
         array $metrics,
     ): void {
-        $key = $this->key('queue_snapshot', $connection, $queue);
-        $timestampKey = $this->key('queue_snapshots', $connection, $queue);
+        $key = $this->redis->key('queue_snapshot', $connection, $queue);
+        $timestampKey = $this->redis->key('queue_snapshots', $connection, $queue);
 
-        $redis = $this->getRedis();
+        $redis = $this->redis->getConnection();
         $now = Carbon::now();
 
         // Store latest snapshot
-        $this->hmset($key, array_merge($metrics, [
+        $redis->hmset($key, array_merge($metrics, [
             'recorded_at' => $now->timestamp,
-        ]), $this->getTtl('aggregated'));
+        ]));
+        $redis->expire($key, $this->redis->getTtl('aggregated'));
 
         // Add to time-series (sorted set)
         $redis->zadd($timestampKey, [
             json_encode($metrics, JSON_THROW_ON_ERROR) => $now->timestamp,
         ]);
-        $redis->expire($timestampKey, $this->getTtl('aggregated'));
+        $redis->expire($timestampKey, $this->redis->getTtl('aggregated'));
 
         // Keep only recent snapshots (last 1000)
         $redis->zremrangebyrank($timestampKey, 0, -1001);
@@ -73,8 +76,11 @@ final class RedisQueueMetricsRepository implements QueueMetricsRepository
      */
     public function getLatestMetrics(string $connection, string $queue): array
     {
-        $key = $this->key('queue_snapshot', $connection, $queue);
-        $data = $this->hgetall($key);
+        $key = $this->redis->key('queue_snapshot', $connection, $queue);
+        $redis = $this->redis->getConnection();
+
+        /** @var array<string, string> */
+        $data = $redis->hgetall($key) ?: [];
 
         if (empty($data)) {
             return [];
@@ -124,7 +130,7 @@ final class RedisQueueMetricsRepository implements QueueMetricsRepository
      */
     public function listQueues(): array
     {
-        $pattern = $this->key('discovered', '*', '*');
+        $pattern = $this->redis->key('discovered', '*', '*');
         $keys = $this->scanKeys($pattern);
 
         $queues = [];
@@ -144,18 +150,19 @@ final class RedisQueueMetricsRepository implements QueueMetricsRepository
 
     public function markQueueDiscovered(string $connection, string $queue): void
     {
-        $key = $this->key('discovered', $connection, $queue);
-        $this->getRedis()->set($key, Carbon::now()->timestamp);
+        $key = $this->redis->key('discovered', $connection, $queue);
+        $this->redis->getConnection()->set($key, Carbon::now()->timestamp);
     }
 
     public function cleanup(int $olderThanSeconds): int
     {
-        $pattern = $this->key('queue_snapshot', '*', '*');
+        $pattern = $this->redis->key('queue_snapshot', '*', '*');
         $keys = $this->scanKeys($pattern);
+        $redis = $this->redis->getConnection();
         $deleted = 0;
 
         foreach ($keys as $key) {
-            $recordedAt = $this->getRedis()->hget($key, 'recorded_at');
+            $recordedAt = $redis->hget($key, 'recorded_at');
 
             if ($recordedAt === null || $recordedAt === false) {
                 continue;
@@ -164,7 +171,7 @@ final class RedisQueueMetricsRepository implements QueueMetricsRepository
             $age = Carbon::now()->timestamp - (int) $recordedAt;
 
             if ($age > $olderThanSeconds) {
-                $this->getRedis()->del($key);
+                $redis->del($key);
                 $deleted++;
             }
         }
@@ -202,5 +209,24 @@ final class RedisQueueMetricsRepository implements QueueMetricsRepository
         }
 
         return max(0.0, $score);
+    }
+
+    /**
+     * @return array<string>
+     */
+    private function scanKeys(string $pattern): array
+    {
+        $redis = $this->redis->getConnection();
+        $keys = [];
+        $cursor = '0';
+
+        do {
+            /** @var array{0: string, 1: array<string>} */
+            $result = $redis->scan($cursor, ['match' => $pattern, 'count' => 100]);
+            [$cursor, $found] = $result;
+            $keys = array_merge($keys, $found);
+        } while ($cursor !== '0');
+
+        return $keys;
     }
 }

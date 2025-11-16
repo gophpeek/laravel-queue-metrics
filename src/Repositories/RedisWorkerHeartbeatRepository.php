@@ -8,15 +8,17 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerHeartbeat;
 use PHPeek\LaravelQueueMetrics\Enums\WorkerState;
-use PHPeek\LaravelQueueMetrics\Repositories\Concerns\InteractsWithRedis;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
+use PHPeek\LaravelQueueMetrics\Services\RedisConnectionManager;
 
 /**
  * Redis-based implementation of worker heartbeat repository.
  */
-final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
+final readonly class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
 {
-    use InteractsWithRedis;
+    public function __construct(
+        private RedisConnectionManager $redis,
+    ) {}
 
     public function recordHeartbeat(
         string $workerId,
@@ -28,14 +30,15 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
         int $pid,
         string $hostname,
     ): void {
-        $redis = $this->getRedis();
-        $workerKey = $this->key('worker', $workerId);
-        $indexKey = $this->key('workers', 'all');
+        $redis = $this->redis->getConnection();
+        $workerKey = $this->redis->key('worker', $workerId);
+        $indexKey = $this->redis->key('workers', 'all');
 
         $now = Carbon::now();
 
         // Get existing data to calculate state durations
-        $existingData = $this->hgetall($workerKey);
+        /** @var array<string, string> */
+        $existingData = $redis->hgetall($workerKey) ?: [];
         $previousState = isset($existingData['state'])
             ? WorkerState::from($existingData['state'])
             : null;
@@ -105,8 +108,8 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
             $pipe->zadd($indexKey, [$workerId => $now->timestamp]);
 
             // Set TTL
-            $pipe->expire($workerKey, $this->getTtl('raw'));
-            $pipe->expire($indexKey, $this->getTtl('raw'));
+            $pipe->expire($workerKey, $this->redis->getTtl('raw'));
+            $pipe->expire($indexKey, $this->redis->getTtl('raw'));
         });
     }
 
@@ -115,8 +118,8 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
         WorkerState $newState,
         Carbon $transitionTime,
     ): void {
-        $redis = $this->getRedis();
-        $workerKey = $this->key('worker', $workerId);
+        $redis = $this->redis->getConnection();
+        $workerKey = $this->redis->key('worker', $workerId);
 
         // Check if worker exists
         if (! $redis->exists($workerKey)) {
@@ -131,8 +134,11 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
 
     public function getWorker(string $workerId): ?WorkerHeartbeat
     {
-        $workerKey = $this->key('worker', $workerId);
-        $data = $this->hgetall($workerKey);
+        $workerKey = $this->redis->key('worker', $workerId);
+        $redis = $this->redis->getConnection();
+
+        /** @var array<string, string> */
+        $data = $redis->hgetall($workerKey) ?: [];
 
         if (empty($data)) {
             return null;
@@ -148,8 +154,8 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
         ?string $connection = null,
         ?string $queue = null,
     ): Collection {
-        $indexKey = $this->key('workers', 'all');
-        $redis = $this->getRedis();
+        $indexKey = $this->redis->key('workers', 'all');
+        $redis = $this->redis->getConnection();
 
         // Get all worker IDs
         /** @var array<string> */
@@ -182,8 +188,8 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
      */
     public function getWorkersByState(WorkerState $state): Collection
     {
-        $indexKey = $this->key('workers', 'all');
-        $redis = $this->getRedis();
+        $indexKey = $this->redis->key('workers', 'all');
+        $redis = $this->redis->getConnection();
 
         /** @var array<string> */
         $workerIds = $redis->zrange($indexKey, 0, -1);
@@ -196,8 +202,8 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
 
     public function detectStaledWorkers(int $thresholdSeconds = 60): int
     {
-        $indexKey = $this->key('workers', 'all');
-        $redis = $this->getRedis();
+        $indexKey = $this->redis->key('workers', 'all');
+        $redis = $this->redis->getConnection();
 
         $cutoff = Carbon::now()->subSeconds($thresholdSeconds)->timestamp;
 
@@ -226,9 +232,9 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
 
     public function removeWorker(string $workerId): void
     {
-        $redis = $this->getRedis();
-        $workerKey = $this->key('worker', $workerId);
-        $indexKey = $this->key('workers', 'all');
+        $redis = $this->redis->getConnection();
+        $workerKey = $this->redis->key('worker', $workerId);
+        $indexKey = $this->redis->key('workers', 'all');
 
         $redis->pipeline(function ($pipe) use ($workerKey, $indexKey, $workerId) {
             $pipe->del($workerKey);
@@ -238,8 +244,8 @@ final class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRepository
 
     public function cleanup(int $olderThanSeconds): int
     {
-        $indexKey = $this->key('workers', 'all');
-        $redis = $this->getRedis();
+        $indexKey = $this->redis->key('workers', 'all');
+        $redis = $this->redis->getConnection();
 
         $cutoff = Carbon::now()->subSeconds($olderThanSeconds)->timestamp;
 

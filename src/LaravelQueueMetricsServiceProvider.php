@@ -31,6 +31,7 @@ use PHPeek\LaravelQueueMetrics\Repositories\RedisWorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisWorkerRepository;
 use PHPeek\LaravelQueueMetrics\Services\LaravelQueueInspector;
 use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Services\RedisConnectionManager;
 use PHPeek\LaravelQueueMetrics\Utilities\PercentileCalculator;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -48,39 +49,59 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
 
     public function packageRegistered(): void
     {
+        // Register Redis connection manager
+        $this->app->singleton(RedisConnectionManager::class, function ($app) {
+            $connectionName = config('queue-metrics.storage.redis.connection', 'default');
+            if (! is_string($connectionName)) {
+                $connectionName = 'default';
+            }
+
+            $prefix = config('queue-metrics.storage.redis.prefix', 'queue_metrics');
+            if (! is_string($prefix)) {
+                $prefix = 'queue_metrics';
+            }
+
+            $ttls = config('queue-metrics.storage.redis.ttl', []);
+            if (! is_array($ttls)) {
+                $ttls = [];
+            }
+
+            return new RedisConnectionManager($connectionName, $prefix, $ttls);
+        });
+
         // Register repositories based on configured driver
         $this->app->singleton(JobMetricsRepository::class, function ($app) {
             return match (config('queue-metrics.storage.driver', 'redis')) {
-                'redis' => new RedisJobMetricsRepository(),
-                default => new RedisJobMetricsRepository(),
+                'redis' => new RedisJobMetricsRepository($app->make(RedisConnectionManager::class)),
+                default => new RedisJobMetricsRepository($app->make(RedisConnectionManager::class)),
             };
         });
 
         $this->app->singleton(QueueMetricsRepository::class, function ($app) {
             return match (config('queue-metrics.storage.driver', 'redis')) {
-                'redis' => new RedisQueueMetricsRepository(),
-                default => new RedisQueueMetricsRepository(),
+                'redis' => new RedisQueueMetricsRepository($app->make(RedisConnectionManager::class)),
+                default => new RedisQueueMetricsRepository($app->make(RedisConnectionManager::class)),
             };
         });
 
         $this->app->singleton(WorkerRepository::class, function ($app) {
             return match (config('queue-metrics.storage.driver', 'redis')) {
-                'redis' => new RedisWorkerRepository(),
-                default => new RedisWorkerRepository(),
+                'redis' => new RedisWorkerRepository($app->make(RedisConnectionManager::class)),
+                default => new RedisWorkerRepository($app->make(RedisConnectionManager::class)),
             };
         });
 
         $this->app->singleton(BaselineRepository::class, function ($app) {
             return match (config('queue-metrics.storage.driver', 'redis')) {
-                'redis' => new RedisBaselineRepository(),
-                default => new RedisBaselineRepository(),
+                'redis' => new RedisBaselineRepository($app->make(RedisConnectionManager::class)),
+                default => new RedisBaselineRepository($app->make(RedisConnectionManager::class)),
             };
         });
 
         $this->app->singleton(WorkerHeartbeatRepository::class, function ($app) {
             return match (config('queue-metrics.storage.driver', 'redis')) {
-                'redis' => new RedisWorkerHeartbeatRepository(),
-                default => new RedisWorkerHeartbeatRepository(),
+                'redis' => new RedisWorkerHeartbeatRepository($app->make(RedisConnectionManager::class)),
+                default => new RedisWorkerHeartbeatRepository($app->make(RedisConnectionManager::class)),
             };
         });
 

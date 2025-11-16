@@ -6,15 +6,17 @@ namespace PHPeek\LaravelQueueMetrics\Repositories;
 
 use Carbon\Carbon;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerStatsData;
-use PHPeek\LaravelQueueMetrics\Repositories\Concerns\InteractsWithRedis;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerRepository;
+use PHPeek\LaravelQueueMetrics\Services\RedisConnectionManager;
 
 /**
  * Redis-based implementation of worker repository.
  */
-final class RedisWorkerRepository implements WorkerRepository
+final readonly class RedisWorkerRepository implements WorkerRepository
 {
-    use InteractsWithRedis;
+    public function __construct(
+        private RedisConnectionManager $redis,
+    ) {}
 
     public function registerWorker(
         int $pid,
@@ -23,9 +25,10 @@ final class RedisWorkerRepository implements WorkerRepository
         string $queue,
         Carbon $spawnedAt,
     ): void {
-        $key = $this->key('worker', (string) $pid);
+        $key = $this->redis->key('worker', (string) $pid);
+        $redis = $this->redis->getConnection();
 
-        $this->hmset($key, [
+        $redis->hmset($key, [
             'pid' => $pid,
             'hostname' => $hostname,
             'connection' => $connection,
@@ -37,7 +40,7 @@ final class RedisWorkerRepository implements WorkerRepository
         ]);
 
         // Add to active workers set
-        $this->getRedis()->sadd($this->key('active_workers'), [(string) $pid]);
+        $redis->sadd($this->redis->key('active_workers'), [(string) $pid]);
     }
 
     public function updateWorkerActivity(
@@ -47,8 +50,8 @@ final class RedisWorkerRepository implements WorkerRepository
         int $jobsProcessed = 0,
         float $idlePercentage = 0.0,
     ): void {
-        $key = $this->key('worker', (string) $pid);
-        $redis = $this->getRedis();
+        $key = $this->redis->key('worker', (string) $pid);
+        $redis = $this->redis->getConnection();
 
         $updates = [
             'status' => $status,
@@ -72,17 +75,20 @@ final class RedisWorkerRepository implements WorkerRepository
 
     public function unregisterWorker(int $pid): void
     {
-        $key = $this->key('worker', (string) $pid);
-        $redis = $this->getRedis();
+        $key = $this->redis->key('worker', (string) $pid);
+        $redis = $this->redis->getConnection();
 
         $redis->del($key);
-        $redis->srem($this->key('active_workers'), [(string) $pid]);
+        $redis->srem($this->redis->key('active_workers'), [(string) $pid]);
     }
 
     public function getWorkerStats(int $pid): ?WorkerStatsData
     {
-        $key = $this->key('worker', (string) $pid);
-        $data = $this->hgetall($key);
+        $key = $this->redis->key('worker', (string) $pid);
+        $redis = $this->redis->getConnection();
+
+        /** @var array<string, string> */
+        $data = $redis->hgetall($key) ?: [];
 
         if (empty($data)) {
             return null;
@@ -108,10 +114,10 @@ final class RedisWorkerRepository implements WorkerRepository
      */
     public function getActiveWorkers(?string $connection = null, ?string $queue = null): array
     {
-        $redis = $this->getRedis();
+        $redis = $this->redis->getConnection();
 
         /** @var array<string> */
-        $pids = $redis->smembers($this->key('active_workers'));
+        $pids = $redis->smembers($this->redis->key('active_workers'));
 
         $workers = [];
         foreach ($pids as $pid) {
@@ -145,14 +151,14 @@ final class RedisWorkerRepository implements WorkerRepository
 
     public function cleanupStaleWorkers(int $olderThanSeconds): int
     {
-        $redis = $this->getRedis();
+        $redis = $this->redis->getConnection();
 
         /** @var array<string> */
-        $pids = $redis->smembers($this->key('active_workers'));
+        $pids = $redis->smembers($this->redis->key('active_workers'));
         $deleted = 0;
 
         foreach ($pids as $pid) {
-            $key = $this->key('worker', $pid);
+            $key = $this->redis->key('worker', $pid);
             $lastActivity = $redis->hget($key, 'last_activity');
 
             if ($lastActivity === null || $lastActivity === false) {
