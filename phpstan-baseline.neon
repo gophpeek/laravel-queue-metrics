@@ -19,18 +19,6 @@ parameters:
 			path: src/Actions/CalculateJobMetricsAction.php
 
 		-
-			message: '#^Access to an undefined property PHPeek\\SystemMetrics\\DTO\\Metrics\\Process\\ProcessSnapshot\:\:\$cpuTimes\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Actions/RecordWorkerHeartbeatAction.php
-
-		-
-			message: '#^Access to an undefined property PHPeek\\SystemMetrics\\DTO\\Metrics\\Process\\ProcessSnapshot\:\:\$memoryRssBytes\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Actions/RecordWorkerHeartbeatAction.php
-
-		-
 			message: '#^Cannot cast mixed to int\.$#'
 			identifier: cast.int
 			count: 4

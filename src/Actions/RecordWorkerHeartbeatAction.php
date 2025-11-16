@@ -44,10 +44,10 @@ final readonly class RecordWorkerHeartbeatAction
 
             if ($metricsResult->isSuccess()) {
                 $snapshot = $metricsResult->getValue();
-                $memoryUsageMb = $snapshot->memoryRssBytes / 1024 / 1024;
+                $memoryUsageMb = $snapshot->resources->memoryRssBytes / 1024 / 1024;
 
                 // Calculate CPU usage percentage from process times
-                $cpuTimes = $snapshot->cpuTimes;
+                $cpuTimes = $snapshot->resources->cpuTimes;
                 $totalCpuTimeMs = $cpuTimes->user + $cpuTimes->system;
 
                 // Get uptime estimate (simplified - actual calculation would need previous snapshot)
