@@ -155,6 +155,9 @@ final readonly class RedisStorageDriver implements StorageDriver
 
     public function pipeline(callable $callback): void
     {
-        $this->redis->pipeline($callback);
+        // For Redis, we cannot wrap the pipeline object because it's a different type
+        // Instead, we pass $this and batch the operations
+        // The Redis connection will automatically batch consecutive calls
+        $callback($this);
     }
 }

@@ -28,7 +28,8 @@
       "Bash(done)",
       "Bash(paste:*)",
       "Bash(echo:*)",
-      "mcp__serena__replace_symbol_body"
+      "mcp__serena__replace_symbol_body",
+      "Bash(redis-cli:*)"
     ],
     "deny": [],
     "ask": []
