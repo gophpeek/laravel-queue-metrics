@@ -24,7 +24,7 @@ final readonly class JobProcessingListener
     {
         $job = $event->job;
         $payload = $job->payload();
-        $jobId = $job->getJobId() ?? uniqid('job_', true);
+        $jobId = $job->getJobId();
 
         // Start tracking process metrics for this job
         $pid = getmypid();
@@ -38,7 +38,7 @@ final readonly class JobProcessingListener
 
         $jobClass = $payload['displayName'] ?? 'UnknownJob';
         $connection = $event->connectionName;
-        $queue = $job->getQueue() ?? 'default';
+        $queue = $job->getQueue();
 
         $this->recordJobStart->execute(
             jobId: $jobId,

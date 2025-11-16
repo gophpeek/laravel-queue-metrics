@@ -25,10 +25,10 @@ final readonly class JobFailedListener
         $payload = $job->payload();
 
         $connection = $event->connectionName;
-        $queue = $job->getQueue() ?? 'default';
+        $queue = $job->getQueue();
 
         $this->recordJobFailure->execute(
-            jobId: $job->getJobId() ?? uniqid('job_', true),
+            jobId: $job->getJobId(),
             jobClass: $payload['displayName'] ?? 'UnknownJob',
             connection: $connection,
             queue: $queue,

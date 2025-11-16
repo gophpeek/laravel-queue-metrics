@@ -24,7 +24,7 @@ final readonly class JobProcessedListener
     {
         $job = $event->job;
         $payload = $job->payload();
-        $jobId = $job->getJobId() ?? uniqid('job_', true);
+        $jobId = $job->getJobId();
 
         // Calculate duration
         $startTime = $payload['pushedAt'] ?? microtime(true);
@@ -46,7 +46,7 @@ final readonly class JobProcessedListener
         }
 
         $connection = $event->connectionName;
-        $queue = $job->getQueue() ?? 'default';
+        $queue = $job->getQueue();
 
         $this->recordJobCompletion->execute(
             jobId: $jobId,
