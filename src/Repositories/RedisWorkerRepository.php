@@ -167,7 +167,8 @@ final readonly class RedisWorkerRepository implements WorkerRepository
                 continue;
             }
 
-            $age = Carbon::now()->timestamp - (int) $lastActivity;
+            $lastActivityInt = is_numeric($lastActivity) ? (int) $lastActivity : 0;
+            $age = Carbon::now()->timestamp - $lastActivityInt;
 
             if ($age > $olderThanSeconds) {
                 $this->unregisterWorker((int) $pid);

@@ -199,18 +199,6 @@ parameters:
 			path: src/Repositories/RedisQueueMetricsRepository.php
 
 		-
-			message: '#^Cannot cast mixed to float\.$#'
-			identifier: cast.double
-			count: 1
-			path: src/Repositories/RedisQueueMetricsRepository.php
-
-		-
-			message: '#^Cannot cast mixed to int\.$#'
-			identifier: cast.int
-			count: 3
-			path: src/Repositories/RedisQueueMetricsRepository.php
-
-		-
 			message: '#^Call to an undefined method PHPeek\\LaravelQueueMetrics\\Storage\\StorageManager\:\:getConnection\(\)\.$#'
 			identifier: method.notFound
 			count: 8

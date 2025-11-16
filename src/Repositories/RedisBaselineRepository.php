@@ -98,7 +98,8 @@ final readonly class RedisBaselineRepository implements BaselineRepository
                 continue;
             }
 
-            $age = Carbon::now()->timestamp - (int) $calculatedAt;
+            $calculatedAtInt = is_numeric($calculatedAt) ? (int) $calculatedAt : 0;
+            $age = Carbon::now()->timestamp - $calculatedAtInt;
 
             if ($age > $olderThanSeconds) {
                 $redis->del($key);

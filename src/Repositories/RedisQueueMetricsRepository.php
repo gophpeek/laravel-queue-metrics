@@ -168,7 +168,8 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
                 continue;
             }
 
-            $age = Carbon::now()->timestamp - (int) $recordedAt;
+            $recordedAtInt = is_numeric($recordedAt) ? (int) $recordedAt : 0;
+            $age = Carbon::now()->timestamp - $recordedAtInt;
 
             if ($age > $olderThanSeconds) {
                 $redis->del($key);
@@ -187,23 +188,27 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
         $score = 100.0;
 
         // Penalize for queue depth
-        $depth = (int) ($metrics['depth'] ?? 0);
+        $depthValue = $metrics['depth'] ?? 0;
+        $depth = is_numeric($depthValue) ? (int) $depthValue : 0;
         if ($depth > 100) {
             $score -= min(30, ($depth - 100) / 10);
         }
 
         // Penalize for old jobs
-        $oldestAge = (int) ($metrics['oldest_job_age'] ?? 0);
+        $oldestAgeValue = $metrics['oldest_job_age'] ?? 0;
+        $oldestAge = is_numeric($oldestAgeValue) ? (int) $oldestAgeValue : 0;
         if ($oldestAge > 300) { // 5 minutes
             $score -= min(30, ($oldestAge - 300) / 60);
         }
 
         // Penalize for high failure rate
-        $failureRate = (float) ($metrics['failure_rate'] ?? 0.0);
+        $failureRateValue = $metrics['failure_rate'] ?? 0.0;
+        $failureRate = is_numeric($failureRateValue) ? (float) $failureRateValue : 0.0;
         $score -= min(20, $failureRate);
 
         // Penalize for no active workers
-        $activeWorkers = (int) ($metrics['active_workers'] ?? 0);
+        $activeWorkersValue = $metrics['active_workers'] ?? 0;
+        $activeWorkers = is_numeric($activeWorkersValue) ? (int) $activeWorkersValue : 0;
         if ($activeWorkers === 0 && $depth > 0) {
             $score -= 20;
         }

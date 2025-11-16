@@ -232,7 +232,8 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
                 continue;
             }
 
-            $age = Carbon::now()->timestamp - (int) $lastProcessed;
+            $lastProcessedInt = is_numeric($lastProcessed) ? (int) $lastProcessed : 0;
+            $age = Carbon::now()->timestamp - $lastProcessedInt;
 
             if ($age > $olderThanSeconds) {
                 $redis->del($key);

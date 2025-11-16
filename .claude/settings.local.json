@@ -27,7 +27,8 @@
       "Bash(composer show:*)",
       "Bash(done)",
       "Bash(paste:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "mcp__serena__replace_symbol_body"
     ],
     "deny": [],
     "ask": []
