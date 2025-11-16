@@ -163,57 +163,9 @@ parameters:
 			path: src/Services/LaravelQueueInspector.php
 
 		-
-			message: '#^Binary operation "/" between mixed and mixed results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
 			message: '#^Call to method getMetrics\(\) on an unknown class Gophpeek\\SystemMetrics\\SystemMetrics\.$#'
 			identifier: class.notFound
 			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^Cannot access offset ''1min'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^Cannot access offset ''count'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^Cannot access offset ''load_average'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^Cannot access offset ''usage_percent'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^PHPDoc tag @var has invalid value \(array\{usage_percent\: float, count\: int, load_average\: array\{1min\: float, 5min\: float, 15min\: float\}\} \$cpu\)\: Unexpected token "\:", expected ''\}'' at offset 61 on line 1$#'
-			identifier: phpDoc.parseError
-			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 4
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 2
 			path: src/Services/ServerMetricsService.php
 
 		-

@@ -114,7 +114,7 @@ final readonly class ServerMetricsService
         $score = 100;
 
         // Type-safe extraction with guards
-        /** @var array{usage_percent: float, count: int, load_average: array{1min: float, 5min: float, 15min: float}} $cpu */
+        /** @var array{usage_percent: float, count: int, load_average: array{'1min': float, '5min': float, '15min': float}} $cpu */
         $cpu = $metrics['cpu'];
         /** @var array{usage_percent: float} $memory */
         $memory = $metrics['memory'];
