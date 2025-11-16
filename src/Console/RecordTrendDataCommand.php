@@ -7,8 +7,6 @@ namespace PHPeek\LaravelQueueMetrics\Console;
 use Illuminate\Console\Command;
 use PHPeek\LaravelQueueMetrics\Actions\RecordQueueDepthHistoryAction;
 use PHPeek\LaravelQueueMetrics\Actions\RecordThroughputHistoryAction;
-use PHPeek\LaravelQueueMetrics\Contracts\QueueInspector;
-use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Storage\StorageManager;
 
@@ -22,8 +20,6 @@ final class RecordTrendDataCommand extends Command
     protected $description = 'Record queue depth and throughput for trend analysis';
 
     public function __construct(
-        private readonly QueueInspector $queueInspector,
-        private readonly QueueMetricsRepository $queueMetrics,
         private readonly WorkerHeartbeatRepository $workerHeartbeat,
         private readonly RecordQueueDepthHistoryAction $recordQueueDepth,
         private readonly RecordThroughputHistoryAction $recordThroughput,

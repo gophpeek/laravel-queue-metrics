@@ -37,18 +37,6 @@ parameters:
 			path: src/Config/QueueMetricsConfig.php
 
 		-
-			message: '#^Property PHPeek\\LaravelQueueMetrics\\Console\\RecordTrendDataCommand\:\:\$queueInspector is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: src/Console/RecordTrendDataCommand.php
-
-		-
-			message: '#^Property PHPeek\\LaravelQueueMetrics\\Console\\RecordTrendDataCommand\:\:\$queueMetrics is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: src/Console/RecordTrendDataCommand.php
-
-		-
 			message: '#^Cannot cast mixed to float\.$#'
 			identifier: cast.double
 			count: 4
