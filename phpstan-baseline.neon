@@ -1,18 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Class PHPeek\\LaravelQueueMetrics\\Facades\\QueueMetrics has PHPDoc tag @method for method getOverview\(\) return type with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Facades/QueueMetrics.php
-
-		-
-			message: '#^Class PHPeek\\LaravelQueueMetrics\\Facades\\QueueMetrics has PHPDoc tag @method for method healthCheck\(\) return type with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Facades/QueueMetrics.php
-
-		-
 			message: '#^Static method Spatie\\Prometheus\\Facades\\Prometheus\:\:addCounter\(\) invoked with 5 parameters, 1 required\.$#'
 			identifier: arguments.count
 			count: 2
@@ -58,12 +46,6 @@ parameters:
 			message: '#^Call to an undefined method PHPeek\\LaravelQueueMetrics\\Storage\\StorageManager\:\:getConnection\(\)\.$#'
 			identifier: method.notFound
 			count: 10
-			path: src/Repositories/RedisJobMetricsRepository.php
-
-		-
-			message: '#^Invalid array key type float\.$#'
-			identifier: array.invalidKey
-			count: 3
 			path: src/Repositories/RedisJobMetricsRepository.php
 
 		-

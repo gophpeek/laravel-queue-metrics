@@ -76,15 +76,15 @@ final readonly class RedisJobMetricsRepository implements JobMetricsRepository
             $pipe->hset($metricsKey, 'last_processed_at', $completedAt->timestamp);
 
             // Store duration sample (sorted set with timestamp as score)
-            $pipe->zadd($durationKey, [$durationMs => $completedAt->timestamp]);
+            $pipe->zadd($durationKey, [(string) $durationMs => $completedAt->timestamp]);
             $pipe->expire($durationKey, $this->redis->getTtl('raw'));
 
             // Store memory sample
-            $pipe->zadd($memoryKey, [$memoryMb => $completedAt->timestamp]);
+            $pipe->zadd($memoryKey, [(string) $memoryMb => $completedAt->timestamp]);
             $pipe->expire($memoryKey, $this->redis->getTtl('raw'));
 
             // Store CPU time sample
-            $pipe->zadd($cpuKey, [$cpuTimeMs => $completedAt->timestamp]);
+            $pipe->zadd($cpuKey, [(string) $cpuTimeMs => $completedAt->timestamp]);
             $pipe->expire($cpuKey, $this->redis->getTtl('raw'));
 
             // Keep only recent samples (limit to 10000)
