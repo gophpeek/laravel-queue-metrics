@@ -26,7 +26,8 @@
       "Bash(xargs:*)",
       "Bash(composer show:*)",
       "Bash(done)",
-      "Bash(paste:*)"
+      "Bash(paste:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

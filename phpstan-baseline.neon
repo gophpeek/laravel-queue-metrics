@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Cannot cast mixed to int\.$#'
-			identifier: cast.int
-			count: 4
-			path: src/Config/QueueMetricsConfig.php
-
-		-
 			message: '#^Class PHPeek\\LaravelQueueMetrics\\Facades\\QueueMetrics has PHPDoc tag @method for method getOverview\(\) return type with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

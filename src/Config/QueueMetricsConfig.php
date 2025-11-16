@@ -95,22 +95,30 @@ final readonly class QueueMetricsConfig
 
     public function getBatchSize(): int
     {
-        return (int) ($this->performance['batch_size'] ?? 100);
+        $batchSize = $this->performance['batch_size'] ?? 100;
+
+        return is_numeric($batchSize) ? (int) $batchSize : 100;
     }
 
     public function getPercentileSamples(): int
     {
-        return (int) ($this->performance['percentile_samples'] ?? 1000);
+        $samples = $this->performance['percentile_samples'] ?? 1000;
+
+        return is_numeric($samples) ? (int) $samples : 1000;
     }
 
     public function getBaselineSamples(): int
     {
-        return (int) ($this->performance['baseline_samples'] ?? 100);
+        $samples = $this->performance['baseline_samples'] ?? 100;
+
+        return is_numeric($samples) ? (int) $samples : 100;
     }
 
     public function getStaleThreshold(): int
     {
-        return (int) ($this->workerHeartbeat['stale_threshold'] ?? 60);
+        $threshold = $this->workerHeartbeat['stale_threshold'] ?? 60;
+
+        return is_numeric($threshold) ? (int) $threshold : 60;
     }
 
     public function getPrometheusNamespace(): string
