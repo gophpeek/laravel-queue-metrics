@@ -25,7 +25,7 @@ Laravel Queue Metrics provides deep observability into your Laravel queue system
 ## Requirements
 
 - PHP 8.2+
-- Laravel 11.0+
+- Laravel 11.0+ or 12.0+
 - Redis or Database for metrics storage
 - (Optional) [gophpeek/system-metrics](https://github.com/gophpeek/system-metrics) for server resource monitoring
 
