@@ -15,6 +15,7 @@ use PHPeek\LaravelQueueMetrics\Actions\RecordJobStartAction;
 use PHPeek\LaravelQueueMetrics\Actions\RecordWorkerHeartbeatAction;
 use PHPeek\LaravelQueueMetrics\Actions\TransitionWorkerStateAction;
 use PHPeek\LaravelQueueMetrics\Console\DetectStaleWorkersCommand;
+use PHPeek\LaravelQueueMetrics\Console\RecordTrendDataCommand;
 use PHPeek\LaravelQueueMetrics\Listeners\JobFailedListener;
 use PHPeek\LaravelQueueMetrics\Listeners\JobProcessedListener;
 use PHPeek\LaravelQueueMetrics\Listeners\JobProcessingListener;
@@ -49,7 +50,8 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
             ->hasConfigFile('queue-metrics')
             ->hasRoute('api')
             ->hasMigration('2024_01_01_000001_create_queue_metrics_storage_tables')
-            ->hasCommand(DetectStaleWorkersCommand::class);
+            ->hasCommand(DetectStaleWorkersCommand::class)
+            ->hasCommand(RecordTrendDataCommand::class);
     }
 
     public function packageRegistered(): void
@@ -98,6 +100,7 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
         $this->app->singleton(QueueInspector::class, LaravelQueueInspector::class);
         $this->app->singleton(MetricsQueryService::class);
         $this->app->singleton(ServerMetricsService::class);
+        $this->app->singleton(Services\TrendAnalysisService::class);
 
         // Register utilities
         $this->app->singleton(PercentileCalculator::class);
@@ -109,6 +112,8 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
         $this->app->singleton(CalculateJobMetricsAction::class);
         $this->app->singleton(RecordWorkerHeartbeatAction::class);
         $this->app->singleton(TransitionWorkerStateAction::class);
+        $this->app->singleton(Actions\RecordQueueDepthHistoryAction::class);
+        $this->app->singleton(Actions\RecordThroughputHistoryAction::class);
     }
 
     public function packageBooted(): void
