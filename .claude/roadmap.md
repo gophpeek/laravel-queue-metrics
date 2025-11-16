@@ -46,7 +46,7 @@ All 5 tasks completed:
 - [ ] Health check logic
 
 #### 2.4 PHPStan Cleanup
-- [⏸️] Current: 41 baseline errors (down from 114: **73 errors fixed - 64% reduction** 🎉🎊)
+- [⏸️] Current: 38 baseline errors (down from 114: **76 errors fixed - 67% reduction** 🎉🎊)
 - [✅] Removed unused properties in RecordTrendDataCommand (2 errors fixed)
 - [✅] Fixed ProcessSnapshot property access in RecordWorkerHeartbeatAction (2 errors fixed)
 - [✅] Added type guards to 11 DTO fromArray methods - First pass (20 errors fixed)
@@ -75,6 +75,11 @@ All 5 tasks completed:
   - Laravel's Job interface guarantees getJobId() and getQueue() are non-null
 - [✅] Fixed ServerMetricsService PHPDoc syntax (8 errors fixed - cascading!)
   - Single PHPDoc fix resolved 8 cascading offsetAccess errors
+- [✅] Fixed QueueMetrics facade type annotations (2 errors fixed)
+  - Added detailed array shape types to @method PHPDoc annotations
+- [✅] Fixed array key type in RedisJobMetricsRepository (1 error fixed)
+  - Cast float values to strings when using as Redis zadd array keys
+  - PHP array keys must be int or string, not float
 - [⏸️] SystemMetrics external library errors (5 class.notFound, 2 property.notFound - won't fix)
 - [⏸️] StorageManager undefined method (5 errors - false positive, interface mismatch)
 - [⏸️] Binary operation errors (5 remaining - complex type narrowing, low priority)
