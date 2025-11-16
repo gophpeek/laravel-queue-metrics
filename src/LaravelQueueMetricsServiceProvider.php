@@ -34,7 +34,8 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
     {
         $package
             ->name('queue-metrics')
-            ->hasConfigFile('queue-metrics');
+            ->hasConfigFile('queue-metrics')
+            ->hasRoute('api');
     }
 
     public function packageRegistered(): void
