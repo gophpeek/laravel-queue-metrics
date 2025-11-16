@@ -37,18 +37,6 @@ parameters:
 			path: src/DataTransferObjects/BaselineData.php
 
 		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 2
-			path: src/DataTransferObjects/BaselineData.php
-
-		-
-			message: '#^Parameter \#1 \$time of static method Carbon\\Carbon\:\:parse\(\) expects Carbon\\Month\|Carbon\\WeekDay\|DateTimeInterface\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/DataTransferObjects/BaselineData.php
-
-		-
 			message: '#^Cannot cast mixed to float\.$#'
 			identifier: cast.double
 			count: 7
@@ -67,18 +55,6 @@ parameters:
 			path: src/DataTransferObjects/FailureInfo.php
 
 		-
-			message: '#^Parameter \#1 \$time of static method Carbon\\Carbon\:\:parse\(\) expects Carbon\\Month\|Carbon\\WeekDay\|DateTimeInterface\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/DataTransferObjects/FailureInfo.php
-
-		-
-			message: '#^Parameter \$lastException of class PHPeek\\LaravelQueueMetrics\\DataTransferObjects\\FailureInfo constructor expects string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/DataTransferObjects/FailureInfo.php
-
-		-
 			message: '#^Cannot cast mixed to float\.$#'
 			identifier: cast.double
 			count: 3
@@ -88,12 +64,6 @@ parameters:
 			message: '#^Cannot cast mixed to int\.$#'
 			identifier: cast.int
 			count: 2
-			path: src/DataTransferObjects/HealthStats.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
 			path: src/DataTransferObjects/HealthStats.php
 
 		-

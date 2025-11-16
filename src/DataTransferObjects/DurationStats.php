@@ -25,13 +25,13 @@ final readonly class DurationStats
     public static function fromArray(array $data): self
     {
         return new self(
-            avg: (float) ($data['avg'] ?? 0.0),
-            min: (float) ($data['min'] ?? 0.0),
-            max: (float) ($data['max'] ?? 0.0),
-            p50: (float) ($data['p50'] ?? 0.0),
-            p95: (float) ($data['p95'] ?? 0.0),
-            p99: (float) ($data['p99'] ?? 0.0),
-            stddev: (float) ($data['stddev'] ?? 0.0),
+            avg: is_numeric($data['avg'] ?? 0.0) ? (float) $data['avg'] : 0.0,
+            min: is_numeric($data['min'] ?? 0.0) ? (float) $data['min'] : 0.0,
+            max: is_numeric($data['max'] ?? 0.0) ? (float) $data['max'] : 0.0,
+            p50: is_numeric($data['p50'] ?? 0.0) ? (float) $data['p50'] : 0.0,
+            p95: is_numeric($data['p95'] ?? 0.0) ? (float) $data['p95'] : 0.0,
+            p99: is_numeric($data['p99'] ?? 0.0) ? (float) $data['p99'] : 0.0,
+            stddev: is_numeric($data['stddev'] ?? 0.0) ? (float) $data['stddev'] : 0.0,
         );
     }
 

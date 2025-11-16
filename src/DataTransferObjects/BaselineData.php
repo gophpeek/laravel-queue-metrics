@@ -27,16 +27,20 @@ final readonly class BaselineData
      */
     public static function fromArray(array $data): self
     {
+        $connection = $data['connection'] ?? 'default';
+        $queue = $data['queue'] ?? 'default';
+        $calculatedAt = $data['calculated_at'] ?? null;
+
         return new self(
-            connection: (string) ($data['connection'] ?? 'default'),
-            queue: (string) ($data['queue'] ?? 'default'),
-            cpuPercentPerJob: (float) ($data['cpu_percent_per_job'] ?? 0.0),
-            memoryMbPerJob: (float) ($data['memory_mb_per_job'] ?? 0.0),
-            avgDurationMs: (float) ($data['avg_duration_ms'] ?? 0.0),
-            sampleCount: (int) ($data['sample_count'] ?? 0),
-            confidenceScore: (float) ($data['confidence_score'] ?? 0.0),
-            calculatedAt: isset($data['calculated_at'])
-                ? Carbon::parse($data['calculated_at'])
+            connection: is_string($connection) ? $connection : 'default',
+            queue: is_string($queue) ? $queue : 'default',
+            cpuPercentPerJob: is_numeric($data['cpu_percent_per_job'] ?? 0.0) ? (float) $data['cpu_percent_per_job'] : 0.0,
+            memoryMbPerJob: is_numeric($data['memory_mb_per_job'] ?? 0.0) ? (float) $data['memory_mb_per_job'] : 0.0,
+            avgDurationMs: is_numeric($data['avg_duration_ms'] ?? 0.0) ? (float) $data['avg_duration_ms'] : 0.0,
+            sampleCount: is_numeric($data['sample_count'] ?? 0) ? (int) $data['sample_count'] : 0,
+            confidenceScore: is_numeric($data['confidence_score'] ?? 0.0) ? (float) $data['confidence_score'] : 0.0,
+            calculatedAt: (is_string($calculatedAt) || $calculatedAt instanceof \DateTimeInterface)
+                ? Carbon::parse($calculatedAt)
                 : Carbon::now(),
         );
     }
