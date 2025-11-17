@@ -97,15 +97,14 @@ final readonly class MetricsQueryService
         // Scan Redis for all job metrics keys and aggregate
         $manager = app(\PHPeek\LaravelQueueMetrics\Storage\StorageManager::class);
 
-        // Build full pattern including Laravel Redis prefix
-        $redisPrefix = config('database.redis.options.prefix', '');
-        $ourPrefix = config('queue-metrics.storage.prefix');
-        $fullPattern = $redisPrefix . $ourPrefix . ':jobs:*';
+        // Laravel's Redis connection automatically adds prefix for KEYS command
+        // So we only use our package prefix, not Laravel's Redis prefix
+        $pattern = $manager->key('jobs', '*', '*', '*');
 
         $driver = $manager->driver();
 
-        // Get all job metrics keys - scanKeys expects the FULL pattern with Laravel prefix
-        $keys = $driver->scanKeys($fullPattern);
+        // Get all job metrics keys
+        $keys = $driver->scanKeys($pattern);
 
         // Sum metrics from all keys
         foreach ($keys as $key) {

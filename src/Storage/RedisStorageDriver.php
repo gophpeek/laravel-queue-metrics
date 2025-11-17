@@ -140,17 +140,11 @@ final readonly class RedisStorageDriver implements StorageDriver
 
     public function scanKeys(string $pattern): array
     {
-        $keys = [];
-        $cursor = '0';
-
-        do {
-            /** @var array{0: string, 1: array<string>} */
-            $result = $this->redis->scan($cursor, ['match' => $pattern, 'count' => 100]);
-            [$cursor, $found] = $result;
-            $keys = array_merge($keys, $found);
-        } while ($cursor !== '0');
-
-        return $keys;
+        // Use KEYS command instead of SCAN for pattern matching
+        // Laravel's Redis connection automatically adds prefix to patterns for KEYS
+        // but NOT for SCAN, causing inconsistent behavior with phpredis
+        /** @var array<string> */
+        return $this->redis->command('keys', [$pattern]) ?: [];
     }
 
     public function pipeline(callable $callback): void
