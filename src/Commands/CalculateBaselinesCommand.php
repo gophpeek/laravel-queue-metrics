@@ -37,8 +37,8 @@ final class CalculateBaselinesCommand extends Command
         }
 
         $isDryRun = (bool) $this->option('dry-run');
-        $specificQueue = $this->option('queue');
-        $specificConnection = $this->option('connection');
+        $specificQueue = is_string($this->option('queue')) ? $this->option('queue') : null;
+        $specificConnection = is_string($this->option('connection')) ? $this->option('connection') : null;
 
         if ($isDryRun) {
             $this->warn('DRY RUN MODE - No baselines will be calculated');
