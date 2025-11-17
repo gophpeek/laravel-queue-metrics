@@ -14,6 +14,7 @@ use PHPeek\LaravelQueueMetrics\DataTransferObjects\QueueMetricsData;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerHeartbeat;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerStatsData;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\BaselineRepository;
+use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerRepository;
@@ -25,6 +26,7 @@ final readonly class MetricsQueryService
 {
     public function __construct(
         private CalculateJobMetricsAction $calculateJobMetrics,
+        private JobMetricsRepository $jobMetricsRepository,
         private QueueMetricsRepository $queueMetricsRepository,
         private WorkerRepository $workerRepository,
         private BaselineRepository $baselineRepository,
@@ -88,10 +90,24 @@ final readonly class MetricsQueryService
         $queues = $this->queueMetricsRepository->listQueues();
         $workers = $this->workerRepository->getActiveWorkers();
 
+        // Aggregate job counts from all discovered queues
+        $totalProcessed = 0;
+        $totalFailed = 0;
+
+        foreach ($queues as $queueInfo) {
+            $connection = $queueInfo['connection'];
+            $queue = $queueInfo['queue'];
+
+            // Get all job classes for this queue and sum their metrics
+            $metrics = $this->jobMetricsRepository->getMetrics('*', $connection, $queue);
+            $totalProcessed += (int) ($metrics['total_processed'] ?? 0);
+            $totalFailed += (int) ($metrics['total_failed'] ?? 0);
+        }
+
         return [
             'total_queues' => count($queues),
-            'total_jobs_processed' => 0, // Would aggregate from job metrics
-            'total_jobs_failed' => 0,
+            'total_jobs_processed' => $totalProcessed,
+            'total_jobs_failed' => $totalFailed,
             'total_active_workers' => count($workers),
             'health_score' => 100.0,
         ];
