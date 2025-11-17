@@ -6,7 +6,7 @@ namespace PHPeek\LaravelQueueMetrics\Actions;
 
 use Carbon\Carbon;
 use PHPeek\LaravelQueueMetrics\Config\QueueMetricsConfig;
-use PHPeek\LaravelQueueMetrics\Storage\StorageManager;
+use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 
 /**
  * Record throughput to historical time series for trend analysis.
@@ -14,7 +14,7 @@ use PHPeek\LaravelQueueMetrics\Storage\StorageManager;
 final readonly class RecordThroughputHistoryAction
 {
     public function __construct(
-        private StorageManager $storage,
+        private RedisMetricsStore $storage,
         private QueueMetricsConfig $config,
     ) {}
 

@@ -59,10 +59,10 @@ final readonly class WorkerHeartbeat
             connection: $connection,
             queue: $queue,
             state: WorkerState::from($state),
-            lastHeartbeat: is_string($lastHeartbeat) ? Carbon::parse($lastHeartbeat) : Carbon::now(),
-            lastStateChange: isset($data['last_state_change']) && is_string($data['last_state_change'])
-                ? Carbon::parse($data['last_state_change'])
-                : null,
+            lastHeartbeat: is_numeric($lastHeartbeat) ? Carbon::createFromTimestamp((int) $lastHeartbeat) : (is_string($lastHeartbeat) ? Carbon::parse($lastHeartbeat) : Carbon::now()),
+            lastStateChange: isset($data['last_state_change']) && is_numeric($data['last_state_change'])
+                ? Carbon::createFromTimestamp((int) $data['last_state_change'])
+                : (isset($data['last_state_change']) && is_string($data['last_state_change']) ? Carbon::parse($data['last_state_change']) : null),
             currentJobId: is_string($currentJobId) ? $currentJobId : null,
             currentJobClass: is_string($currentJobClass) ? $currentJobClass : null,
             idleTimeSeconds: is_numeric($data['idle_time_seconds'] ?? 0.0) ? (float) ($data['idle_time_seconds'] ?? 0.0) : 0.0,

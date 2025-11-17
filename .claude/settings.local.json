@@ -39,7 +39,10 @@
       "Bash(composer update:*)",
       "Bash(php:*)",
       "Bash(timeout 30 php:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(/Users/sylvester/Library/Application\\ Support/Herd/bin/php:*)",
+      "Bash(/Users/sylvester/Library/Application Support/Herd/bin/php:*)",
+      "Bash(composer dump-autoload:*)"
     ],
     "deny": [],
     "ask": []

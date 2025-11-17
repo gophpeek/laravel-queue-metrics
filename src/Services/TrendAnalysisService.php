@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPeek\LaravelQueueMetrics\Services;
 
 use Carbon\Carbon;
-use PHPeek\LaravelQueueMetrics\Storage\StorageManager;
+use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 
 /**
  * Analyzes metrics trends over time for forecasting and insights.
@@ -13,7 +13,7 @@ use PHPeek\LaravelQueueMetrics\Storage\StorageManager;
 final readonly class TrendAnalysisService
 {
     public function __construct(
-        private StorageManager $storage,
+        private RedisMetricsStore $storage,
     ) {}
 
     /**

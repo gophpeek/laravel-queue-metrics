@@ -14,8 +14,8 @@ use PHPeek\LaravelQueueMetrics\Http\Controllers\TrendAnalysisController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\WorkerController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\WorkerStatusController;
 
-Route::prefix(config('queue-metrics.api.prefix', 'queue-metrics'))
-    ->middleware(config('queue-metrics.api.middleware', ['api']))
+Route::prefix('queue-metrics')
+    ->middleware(config('queue-metrics.middleware', ['api']))
     ->group(function () {
         // Health check
         Route::get('/health', HealthCheckController::class)

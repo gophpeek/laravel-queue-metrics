@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 use PHPeek\LaravelQueueMetrics\Actions\RecordQueueDepthHistoryAction;
 use PHPeek\LaravelQueueMetrics\Actions\RecordThroughputHistoryAction;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
-use PHPeek\LaravelQueueMetrics\Storage\StorageManager;
+use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 
 /**
  * Record historical trend data for analysis.
@@ -23,7 +23,7 @@ final class RecordTrendDataCommand extends Command
         private readonly WorkerHeartbeatRepository $workerHeartbeat,
         private readonly RecordQueueDepthHistoryAction $recordQueueDepth,
         private readonly RecordThroughputHistoryAction $recordThroughput,
-        private readonly StorageManager $storage,
+        private readonly RedisMetricsStore $storage,
     ) {
         parent::__construct();
     }
