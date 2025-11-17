@@ -21,8 +21,6 @@ use PHPeek\LaravelQueueMetrics\Repositories\RedisJobMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisQueueMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisWorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisWorkerRepository;
-use PHPeek\LaravelQueueMetrics\Storage\DatabaseStorageDriver;
-use PHPeek\LaravelQueueMetrics\Storage\RedisStorageDriver;
 
 // config for PHPeek/LaravelQueueMetrics
 return [
@@ -169,15 +167,10 @@ return [
     | Customizable Classes
     |--------------------------------------------------------------------------
     |
-    | You can override these classes to customize the low-level behavior
+    | You can override these classes to customize the behavior
     | of the package. In most cases, you can just use the defaults.
     |
     */
-
-    'storage_drivers' => [
-        'redis' => RedisStorageDriver::class,
-        'database' => DatabaseStorageDriver::class,
-    ],
 
     'repositories' => [
         JobMetricsRepository::class => RedisJobMetricsRepository::class,
