@@ -27,25 +27,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Queue Metrics Enabled
+    | 👉 BASIC CONFIGURATION
     |--------------------------------------------------------------------------
     |
-    | Enable or disable queue metrics collection globally.
+    | Essential settings to get started with queue metrics collection.
+    | These are the only settings most users need to configure.
     |
     */
 
     'enabled' => env('QUEUE_METRICS_ENABLED', true),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Storage Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Configure how queue metrics are stored. Supported drivers:
-    | - 'redis': Fast, in-memory storage (recommended for production)
-    | - 'database': Persistent storage using database tables
-    |
-    */
 
     'storage' => [
         'driver' => env('QUEUE_METRICS_STORAGE', 'redis'),
@@ -61,41 +51,14 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | HTTP API Configuration
+    | 🔒 SECURITY
     |--------------------------------------------------------------------------
     |
-    | Configure the HTTP API for accessing queue metrics.
-    |
-    */
-
-    'urls' => [
-        'metrics' => 'queue-metrics',
-        'overview' => 'queue-metrics/overview',
-        'jobs' => 'queue-metrics/jobs',
-        'queues' => 'queue-metrics/queues',
-        'workers' => 'queue-metrics/workers',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Allowed IPs
-    |--------------------------------------------------------------------------
-    |
-    | Only these IP addresses will be allowed to access the metrics endpoints.
-    | Set to null to allow all IPs.
+    | Control access to metrics endpoints.
     |
     */
 
     'allowed_ips' => env('QUEUE_METRICS_ALLOWED_IPS') ? explode(',', env('QUEUE_METRICS_ALLOWED_IPS')) : null,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Middleware
-    |--------------------------------------------------------------------------
-    |
-    | The middleware that will be applied to the metrics URLs.
-    |
-    */
 
     'middleware' => [
         'api',
@@ -104,10 +67,10 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Prometheus Export
+    | 📊 INTEGRATIONS
     |--------------------------------------------------------------------------
     |
-    | Configure Prometheus metrics export.
+    | Optional integrations for monitoring and observability.
     |
     */
 
@@ -118,10 +81,44 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Worker Heartbeat Configuration
+    | 🔌 EXTENSIBILITY (for autoscaler & custom processing)
     |--------------------------------------------------------------------------
     |
-    | Configure worker heartbeat monitoring and stale worker detection.
+    | Hooks allow you to extend the metrics processing pipeline.
+    | Register custom hook classes to enrich or process metrics data.
+    |
+    | Available contexts:
+    | - 'before_record': Before recording job metrics
+    | - 'after_record': After recording job metrics (enrich with custom data)
+    | - 'before_calculate': Before calculating aggregated metrics
+    | - 'after_calculate': After calculating aggregated metrics (export to external systems)
+    | - 'before_baseline': Before baseline calculation
+    | - 'after_baseline': After baseline calculation (trigger autoscaler)
+    |
+    | Example:
+    | 'hooks' => [
+    |     'after_record' => [\App\Hooks\CustomMetricsEnricherHook::class],
+    |     'after_baseline' => [\App\Hooks\AutoscalerTriggerHook::class],
+    | ],
+    |
+    */
+
+    'hooks' => [
+        'before_record' => [],
+        'after_record' => [],
+        'before_calculate' => [],
+        'after_calculate' => [],
+        'before_baseline' => [],
+        'after_baseline' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | ⚙️ ADVANCED CONFIGURATION
+    |--------------------------------------------------------------------------
+    |
+    | These settings rarely need changes. They're here if you need fine-grained
+    | control over worker monitoring and baseline calculation behavior.
     |
     */
 
@@ -130,45 +127,51 @@ return [
         'auto_detect_schedule' => env('QUEUE_METRICS_AUTO_DETECT_SCHEDULE', '* * * * *'),
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Performance Tuning
-    |--------------------------------------------------------------------------
-    |
-    | Fine-tune the performance of metrics collection and calculation.
-    |
-    */
+    'baseline' => [
+        // Sliding window size (recent data is weighted higher)
+        'sliding_window_days' => env('QUEUE_METRICS_BASELINE_WINDOW_DAYS', 7),
 
-    'performance' => [
-        'batch_size' => 100,
-        'percentile_samples' => 1000,
-        'baseline_samples' => 100,
+        // Exponential decay factor (higher = faster decay, more weight on recent data)
+        // λ value where weight = e^(-λ * age_in_days)
+        'decay_factor' => env('QUEUE_METRICS_BASELINE_DECAY_FACTOR', 0.1),
+
+        // Target sample size for 100% confidence
+        'target_sample_size' => env('QUEUE_METRICS_BASELINE_TARGET_SAMPLES', 200),
+
+        // Adaptive recalculation intervals based on confidence (in minutes)
+        'intervals' => [
+            'no_baseline' => 1,      // No baseline exists - calculate every minute
+            'low_confidence' => 5,   // Confidence < 0.5 - every 5 minutes
+            'medium_confidence' => 10, // Confidence 0.5-0.7 - every 10 minutes
+            'high_confidence' => 30,  // Confidence 0.7-0.9 - every 30 minutes
+            'very_high_confidence' => 60, // Confidence >= 0.9 - every 60 minutes
+        ],
+
+        // Deviation detection for triggering more frequent recalculation
+        'deviation' => [
+            'enabled' => env('QUEUE_METRICS_BASELINE_DEVIATION_ENABLED', true),
+            'threshold' => env('QUEUE_METRICS_BASELINE_DEVIATION_THRESHOLD', 2.0), // Standard deviations
+            'trigger_interval' => 5, // Recalculate every 5 minutes when deviation detected
+        ],
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Time Windows
+    | 🛠️ SPATIE-STYLE EXTENSIBILITY
     |--------------------------------------------------------------------------
     |
-    | Define time windows (in seconds) for aggregating metrics.
-    | These windows are used to calculate metrics like throughput,
-    | average execution time, and success rates over different periods.
+    | Override repositories and actions to customize package behavior.
+    | This follows Spatie's pattern for extending Laravel packages.
     |
-    */
-
-    'windows' => [
-        'short' => [60, 300, 900],      // 1 minute, 5 minutes, 15 minutes
-        'medium' => [3600],              // 1 hour
-        'long' => [86400],               // 1 day
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Customizable Classes
-    |--------------------------------------------------------------------------
+    | Example: To use a custom repository
+    | 'repositories' => [
+    |     JobMetricsRepository::class => \App\Repositories\CustomJobMetricsRepository::class,
+    | ],
     |
-    | You can override these classes to customize the behavior
-    | of the package. In most cases, you can just use the defaults.
+    | Example: To use a custom action
+    | 'actions' => [
+    |     'record_job_start' => \App\Actions\CustomRecordJobStartAction::class,
+    | ],
     |
     */
 
@@ -189,6 +192,7 @@ return [
         'transition_worker_state' => TransitionWorkerStateAction::class,
         'record_queue_depth_history' => RecordQueueDepthHistoryAction::class,
         'record_throughput_history' => RecordThroughputHistoryAction::class,
+        'calculate_baselines' => \PHPeek\LaravelQueueMetrics\Actions\CalculateBaselinesAction::class,
     ],
 
 ];

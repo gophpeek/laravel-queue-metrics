@@ -6,7 +6,7 @@ namespace PHPeek\LaravelQueueMetrics\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Services\WorkerMetricsQueryService;
 
 /**
  * Worker status and heartbeat controller.
@@ -14,7 +14,7 @@ use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
 final readonly class WorkerStatusController
 {
     public function __construct(
-        private MetricsQueryService $metricsService,
+        private readonly WorkerMetricsQueryService $metricsService,
     ) {}
 
     /**

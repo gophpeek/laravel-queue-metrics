@@ -10,12 +10,12 @@ namespace PHPeek\LaravelQueueMetrics\Config;
 final readonly class QueueMetricsConfig
 {
     /**
-     * @param array<string, array<int>> $windows
-     * @param array<string, int> $retention
-     * @param array<string, mixed> $performance
-     * @param array<string, mixed> $api
-     * @param array<string, mixed> $prometheus
-     * @param array<string, mixed> $workerHeartbeat
+     * @param  array<string, array<int>>  $windows
+     * @param  array<string, int>  $retention
+     * @param  array<string, mixed>  $performance
+     * @param  array<string, mixed>  $api
+     * @param  array<string, mixed>  $prometheus
+     * @param  array<string, mixed>  $workerHeartbeat
      */
     public function __construct(
         public bool $enabled,

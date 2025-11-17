@@ -13,18 +13,6 @@ parameters:
 			path: src/Http/Controllers/PrometheusController.php
 
 		-
-			message: '#^Class Gophpeek\\SystemMetrics\\SystemMetrics not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/LaravelQueueMetricsServiceProvider.php
-
-		-
-			message: '#^Instantiated class Gophpeek\\SystemMetrics\\SystemMetrics not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/LaravelQueueMetricsServiceProvider.php
-
-		-
 			message: '#^Binary operation "\-" between float\|int\|string and int results in an error\.$#'
 			identifier: binaryOp.invalid
 			count: 1
@@ -137,24 +125,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/Services/LaravelQueueInspector.php
-
-		-
-			message: '#^Call to method getMetrics\(\) on an unknown class Gophpeek\\SystemMetrics\\SystemMetrics\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^Parameter \$systemMetrics of method PHPeek\\LaravelQueueMetrics\\Services\\ServerMetricsService\:\:__construct\(\) has invalid type Gophpeek\\SystemMetrics\\SystemMetrics\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Services/ServerMetricsService.php
-
-		-
-			message: '#^Property PHPeek\\LaravelQueueMetrics\\Services\\ServerMetricsService\:\:\$systemMetrics has unknown class Gophpeek\\SystemMetrics\\SystemMetrics as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: src/Services/ServerMetricsService.php
 
 		-
 			message: '#^Parameter \#1 \.\.\.\$arg1 of function max expects non\-empty\-array, list\<float\> given\.$#'

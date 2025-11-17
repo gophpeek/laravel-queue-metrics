@@ -19,9 +19,12 @@ final readonly class RedisMetricsStore
 
     public function __construct()
     {
+        /** @var string $connection */
         $connection = config('queue-metrics.storage.connection', 'default');
         $this->redis = Redis::connection($connection);
-        $this->prefix = config('queue-metrics.storage.prefix', 'queue_metrics');
+        /** @var string $prefix */
+        $prefix = config('queue-metrics.storage.prefix', 'queue_metrics');
+        $this->prefix = $prefix;
     }
 
     /**
@@ -29,7 +32,7 @@ final readonly class RedisMetricsStore
      */
     public function key(string ...$segments): string
     {
-        return $this->prefix . ':' . implode(':', $segments);
+        return $this->prefix.':'.implode(':', $segments);
     }
 
     /**
@@ -37,6 +40,7 @@ final readonly class RedisMetricsStore
      */
     public function getTtl(string $type): int
     {
+        /** @var int */
         return config("queue-metrics.storage.ttl.{$type}", 3600);
     }
 
@@ -58,6 +62,9 @@ final readonly class RedisMetricsStore
 
     // StorageDriver interface methods
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function setHash(string $key, array $data, ?int $ttl = null): void
     {
         $this->redis->hmset($key, $data);
@@ -67,9 +74,14 @@ final readonly class RedisMetricsStore
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getHash(string $key): array
     {
-        return $this->redis->hgetall($key) ?: [];
+        $result = $this->redis->hgetall($key);
+
+        return is_array($result) ? $result : [];
     }
 
     public function getHashField(string $key, string $field): mixed
@@ -86,6 +98,9 @@ final readonly class RedisMetricsStore
         }
     }
 
+    /**
+     * @param  array<string, float|int>  $membersWithScores
+     */
     public function addToSortedSet(string $key, array $membersWithScores, ?int $ttl = null): void
     {
         $this->redis->zadd($key, $membersWithScores);
@@ -95,11 +110,17 @@ final readonly class RedisMetricsStore
         }
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function getSortedSetByRank(string $key, int $start, int $stop): array
     {
         return $this->redis->zrange($key, $start, $stop);
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function getSortedSetByScore(string $key, string $min, string $max): array
     {
         return $this->redis->zrangebyscore($key, $min, $max);
@@ -115,11 +136,19 @@ final readonly class RedisMetricsStore
         return (int) $this->redis->zremrangebyrank($key, $start, $stop);
     }
 
+    public function removeSortedSetByScore(string $key, string $min, string $max): int
+    {
+        return (int) $this->redis->zremrangebyscore($key, $min, $max);
+    }
+
     public function removeFromSortedSet(string $key, string $member): void
     {
         $this->redis->zrem($key, $member);
     }
 
+    /**
+     * @param  array<int, string>  $members
+     */
     public function addToSet(string $key, array $members): void
     {
         if (! empty($members)) {
@@ -127,11 +156,17 @@ final readonly class RedisMetricsStore
         }
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function getSetMembers(string $key): array
     {
         return $this->redis->smembers($key);
     }
 
+    /**
+     * @param  array<int, string>  $members
+     */
     public function removeFromSet(string $key, array $members): void
     {
         if (! empty($members)) {
@@ -153,6 +188,9 @@ final readonly class RedisMetricsStore
         return $this->redis->get($key);
     }
 
+    /**
+     * @param  array<int, string>|string  $keys
+     */
     public function delete(array|string $keys): int
     {
         if (is_string($keys)) {
@@ -176,118 +214,97 @@ final readonly class RedisMetricsStore
         return (bool) $this->redis->expire($key, $seconds);
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function scanKeys(string $pattern): array
     {
-        // Laravel's Redis connection handles prefix automatically for keys() command
-        return $this->redis->command('keys', [$pattern]) ?: [];
+        // Get the underlying PhpRedis client - it includes Redis connection prefix
+        /** @var \Redis $client */
+        $client = $this->redis->client();
+
+        // Get Laravel's Redis connection prefix (e.g., 'laravel_database_')
+        $connectionPrefix = $this->redis->_prefix('');
+
+        // Combine connection prefix with our pattern
+        $fullPattern = $connectionPrefix.$pattern;
+
+        $keys = [];
+        $cursor = null;
+
+        do {
+            // PhpRedis scan() signature: scan(&$cursor, $pattern, $count)
+            /** @var array<int, string>|false $result */
+            $result = $client->scan($cursor, $fullPattern, 1000);
+
+            if ($result === false) {
+                break;
+            }
+
+            // @phpstan-ignore-next-line - PHPDoc type assertion ensures is_array check is valid
+            if (is_array($result) && ! empty($result)) {
+                $keys = array_merge($keys, $result);
+            }
+            // @phpstan-ignore-next-line - Complex scan cursor state management
+        } while ($cursor !== 0 && $cursor !== null);
+
+        /** @var array<int, string> */
+        return $keys;
     }
 
     public function pipeline(callable $callback): void
     {
+        // @phpstan-ignore-next-line - PhpRedis pipeline accepts no parameters in newer versions
         $this->redis->pipeline(function ($pipe) use ($callback) {
-            // Create a wrapper that matches StorageDriver interface
-            $wrapper = new class($pipe, $this) implements \PHPeek\LaravelQueueMetrics\Storage\Contracts\StorageDriver {
-                public function __construct(
-                    private $pipe,
-                    private RedisMetricsStore $store,
-                ) {}
-
-                // Delegate all StorageDriver methods to the pipe
-                public function setHash(string $key, array $data, ?int $ttl = null): void
-                {
-                    $this->pipe->hmset($key, $data);
-                    if ($ttl !== null) {
-                        $this->pipe->expire($key, $ttl);
-                    }
-                }
-
-                public function getHash(string $key): array { return []; }
-                public function getHashField(string $key, string $field): mixed { return null; }
-
-                public function incrementHashField(string $key, string $field, int|float $value): void
-                {
-                    if (is_float($value)) {
-                        $this->pipe->hincrbyfloat($key, $field, $value);
-                    } else {
-                        $this->pipe->hincrby($key, $field, $value);
-                    }
-                }
-
-                public function addToSortedSet(string $key, array $membersWithScores, ?int $ttl = null): void
-                {
-                    $this->pipe->zadd($key, $membersWithScores);
-                    if ($ttl !== null) {
-                        $this->pipe->expire($key, $ttl);
-                    }
-                }
-
-                public function getSortedSetByRank(string $key, int $start, int $stop): array { return []; }
-                public function getSortedSetByScore(string $key, string $min, string $max): array { return []; }
-                public function countSortedSetByScore(string $key, string $min, string $max): int { return 0; }
-
-                public function removeSortedSetByRank(string $key, int $start, int $stop): int
-                {
-                    return (int) $this->pipe->zremrangebyrank($key, $start, $stop);
-                }
-
-                public function removeFromSortedSet(string $key, string $member): void
-                {
-                    $this->pipe->zrem($key, $member);
-                }
-
-                public function addToSet(string $key, array $members): void
-                {
-                    if (! empty($members)) {
-                        $this->pipe->sadd($key, $members);
-                    }
-                }
-
-                public function getSetMembers(string $key): array { return []; }
-
-                public function removeFromSet(string $key, array $members): void
-                {
-                    if (! empty($members)) {
-                        $this->pipe->srem($key, $members);
-                    }
-                }
-
-                public function set(string $key, mixed $value, ?int $ttl = null): void
-                {
-                    if ($ttl !== null) {
-                        $this->pipe->setex($key, $ttl, $value);
-                    } else {
-                        $this->pipe->set($key, $value);
-                    }
-                }
-
-                public function get(string $key): mixed { return null; }
-
-                public function delete(array|string $keys): int
-                {
-                    if (is_string($keys)) {
-                        $keys = [$keys];
-                    }
-                    if (! empty($keys)) {
-                        $this->pipe->del(...$keys);
-                    }
-
-                    return 0;
-                }
-
-                public function exists(string $key): bool { return false; }
-
-                public function expire(string $key, int $seconds): bool
-                {
-                    $this->pipe->expire($key, $seconds);
-
-                    return true;
-                }
-
-                public function scanKeys(string $pattern): array { return []; }
-                public function pipeline(callable $callback): void {}
-            };
-
+            $wrapper = new PipelineWrapper($pipe);
             $callback($wrapper);
         });
+    }
+
+    /**
+     * Execute commands in a Redis transaction (MULTI/EXEC).
+     * Ensures all commands are executed atomically.
+     *
+     * @param  callable(PipelineWrapper): void  $callback
+     * @return array<int, mixed> Results of executed commands
+     */
+    public function transaction(callable $callback): array
+    {
+        // Laravel Redis uses multi() and exec() for transactions
+        $this->redis->multi();
+
+        try {
+            // @phpstan-ignore-next-line - Laravel Connection type is compatible with PipelineWrapper
+            $wrapper = new PipelineWrapper($this->redis);
+            $callback($wrapper);
+
+            $results = $this->redis->exec();
+
+            return is_array($results) ? $results : [];
+        } catch (\Throwable $e) {
+            $this->redis->discard();
+            throw $e;
+        }
+    }
+
+    /**
+     * Execute Lua script atomically on Redis.
+     *
+     * @param  mixed  ...$args
+     */
+    public function eval(string $script, int $numKeys, ...$args): mixed
+    {
+        // @phpstan-ignore-next-line - Redis eval accepts variadic args but PHPStan expects array
+        return $this->redis->eval($script, $numKeys, ...$args);
+    }
+
+    /**
+     * Execute generic Redis command.
+     *
+     * @param  array<int, mixed>  $parameters
+     */
+    public function command(string $method, array $parameters = []): mixed
+    {
+        return $this->redis->command($method, $parameters);
     }
 }

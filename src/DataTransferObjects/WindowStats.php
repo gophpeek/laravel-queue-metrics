@@ -17,7 +17,7 @@ final readonly class WindowStats
     ) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {
@@ -51,9 +51,9 @@ final readonly class WindowStats
     {
         return match (true) {
             $this->windowSeconds < 60 => "{$this->windowSeconds}s",
-            $this->windowSeconds < 3600 => (int) ($this->windowSeconds / 60) . 'm',
-            $this->windowSeconds < 86400 => (int) ($this->windowSeconds / 3600) . 'h',
-            default => (int) ($this->windowSeconds / 86400) . 'd',
+            $this->windowSeconds < 3600 => (int) ($this->windowSeconds / 60).'m',
+            $this->windowSeconds < 86400 => (int) ($this->windowSeconds / 3600).'h',
+            default => (int) ($this->windowSeconds / 86400).'d',
         };
     }
 }

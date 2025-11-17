@@ -6,6 +6,9 @@ namespace PHPeek\LaravelQueueMetrics\Actions;
 
 use Carbon\Carbon;
 use PHPeek\LaravelQueueMetrics\Config\QueueMetricsConfig;
+use PHPeek\LaravelQueueMetrics\DataTransferObjects\QueueDepthData;
+use PHPeek\LaravelQueueMetrics\Events\QueueDepthThresholdExceeded;
+use PHPeek\LaravelQueueMetrics\Support\MetricsConstants;
 use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 
 /**
@@ -41,10 +44,27 @@ final readonly class RecordQueueDepthHistoryAction
 
         // Keep only last 24 hours of data
         $cutoff = $now->copy()->subHours(24)->timestamp;
-        $redis->pipeline(function ($pipe) use ($key, $cutoff) {
-            /** @var \Illuminate\Redis\Connections\Connection $pipe */
-            $pipe->zremrangebyscore($key, '-inf', (string) $cutoff);
-            $pipe->expire($key, 86400 * 2); // 48 hour TTL
-        });
+        $redis->removeSortedSetByScore($key, '-inf', (string) $cutoff);
+
+        // Check if depth exceeds threshold and dispatch event for autoscaler
+        $threshold = MetricsConstants::QUEUE_DEPTH_THRESHOLD;
+        if ($depth > $threshold) {
+            $percentageOver = (($depth - $threshold) / $threshold) * 100;
+
+            QueueDepthThresholdExceeded::dispatch(
+                new QueueDepthData(
+                    $connection,
+                    $queue,
+                    $depth, // pendingJobs
+                    0, // reservedJobs
+                    0, // delayedJobs
+                    null, // oldestPendingJobAge
+                    null, // oldestDelayedJobAge
+                    $now // measuredAt
+                ),
+                $threshold,
+                round($percentageOver, 2)
+            );
+        }
     }
 }

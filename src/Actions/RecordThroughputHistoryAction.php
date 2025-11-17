@@ -40,10 +40,6 @@ final readonly class RecordThroughputHistoryAction
 
         // Keep only last 24 hours
         $cutoff = $now->copy()->subHours(24)->timestamp;
-        $redis->pipeline(function ($pipe) use ($key, $cutoff) {
-            /** @var \Illuminate\Redis\Connections\Connection $pipe */
-            $pipe->zremrangebyscore($key, '-inf', (string) $cutoff);
-            $pipe->expire($key, 86400 * 2);
-        });
+        $redis->removeSortedSetByScore($key, '-inf', (string) $cutoff);
     }
 }

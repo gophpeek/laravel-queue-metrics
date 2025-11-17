@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace PHPeek\LaravelQueueMetrics\Http\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Routing\Controller;
+use PHPeek\LaravelQueueMetrics\Services\JobMetricsQueryService;
+
+/**
+ * HTTP controller for all jobs with comprehensive metrics.
+ */
+final class AllJobsController extends Controller
+{
+    public function __construct(
+        private readonly JobMetricsQueryService $metricsQuery,
+    ) {}
+
+    public function index(): JsonResponse
+    {
+        $jobs = $this->metricsQuery->getAllJobsWithMetrics();
+
+        return response()->json([
+            'data' => $jobs,
+        ]);
+    }
+}

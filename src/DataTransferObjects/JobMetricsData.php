@@ -12,7 +12,7 @@ use Carbon\Carbon;
 final readonly class JobMetricsData
 {
     /**
-     * @param array<WindowStats> $windowStats
+     * @param  array<WindowStats>  $windowStats
      */
     public function __construct(
         public string $jobClass,
@@ -28,7 +28,7 @@ final readonly class JobMetricsData
     ) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {

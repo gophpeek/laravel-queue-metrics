@@ -22,6 +22,7 @@ final readonly class WorkerStatsData
         public ?string $currentJob,
         public float $idlePercentage,
         public Carbon $spawnedAt,
+        public ?Carbon $lastHeartbeat = null,
         public bool $isHorizonWorker = false,
         public ?string $supervisorName = null,
         public ?int $parentSupervisorPid = null,
@@ -29,7 +30,7 @@ final readonly class WorkerStatsData
     ) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {
@@ -42,6 +43,7 @@ final readonly class WorkerStatsData
         $currentJob = $data['current_job'] ?? null;
         $idlePercentage = $data['idle_percentage'] ?? 0.0;
         $spawnedAt = $data['spawned_at'] ?? null;
+        $lastHeartbeat = $data['last_heartbeat'] ?? null;
         $isHorizonWorker = $data['is_horizon_worker'] ?? false;
         $supervisorName = $data['supervisor_name'] ?? null;
         $parentSupervisorPid = $data['parent_supervisor_pid'] ?? null;
@@ -56,9 +58,17 @@ final readonly class WorkerStatsData
             jobsProcessed: is_numeric($jobsProcessed) ? (int) $jobsProcessed : 0,
             currentJob: is_string($currentJob) ? $currentJob : null,
             idlePercentage: is_numeric($idlePercentage) ? (float) $idlePercentage : 0.0,
-            spawnedAt: (is_string($spawnedAt) || $spawnedAt instanceof \DateTimeInterface)
-                ? Carbon::parse($spawnedAt)
-                : Carbon::now(),
+            spawnedAt: match (true) {
+                is_numeric($spawnedAt) => Carbon::createFromTimestamp((int) $spawnedAt),
+                is_string($spawnedAt) => Carbon::parse($spawnedAt),
+                $spawnedAt instanceof \DateTimeInterface => Carbon::parse($spawnedAt),
+                default => Carbon::now(),
+            },
+            lastHeartbeat: $lastHeartbeat !== null
+                ? (is_numeric($lastHeartbeat)
+                    ? Carbon::createFromTimestamp((int) $lastHeartbeat)
+                    : (is_string($lastHeartbeat) ? Carbon::parse($lastHeartbeat) : null))
+                : null,
             isHorizonWorker: (bool) $isHorizonWorker,
             supervisorName: is_string($supervisorName) ? $supervisorName : null,
             parentSupervisorPid: is_numeric($parentSupervisorPid) ? (int) $parentSupervisorPid : null,
@@ -81,6 +91,7 @@ final readonly class WorkerStatsData
             'current_job' => $this->currentJob,
             'idle_percentage' => $this->idlePercentage,
             'spawned_at' => $this->spawnedAt->toIso8601String(),
+            'last_heartbeat' => $this->lastHeartbeat?->toIso8601String(),
             'is_horizon_worker' => $this->isHorizonWorker,
             'supervisor_name' => $this->supervisorName,
             'parent_supervisor_pid' => $this->parentSupervisorPid,

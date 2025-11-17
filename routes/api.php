@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use PHPeek\LaravelQueueMetrics\Http\Controllers\AllJobsController;
+use PHPeek\LaravelQueueMetrics\Http\Controllers\AllQueuesController;
+use PHPeek\LaravelQueueMetrics\Http\Controllers\AllServersController;
+use PHPeek\LaravelQueueMetrics\Http\Controllers\AllWorkersController;
+use PHPeek\LaravelQueueMetrics\Http\Controllers\ApiIndexController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\HealthCheckController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\JobMetricsController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\OverviewController;
@@ -17,15 +22,29 @@ use PHPeek\LaravelQueueMetrics\Http\Controllers\WorkerStatusController;
 Route::prefix('queue-metrics')
     ->middleware(config('queue-metrics.middleware', ['api']))
     ->group(function () {
+        // API discovery index
+        Route::get('/', ApiIndexController::class)
+            ->name('queue-metrics.index');
+
         // Health check
         Route::get('/health', HealthCheckController::class)
             ->name('queue-metrics.health');
 
-        // Overview
+        // Overview (comprehensive)
         Route::get('/overview', OverviewController::class)
             ->name('queue-metrics.overview');
 
-        // Job metrics
+        // Comprehensive collection endpoints
+        Route::get('/jobs', [AllJobsController::class, 'index'])
+            ->name('queue-metrics.jobs.index');
+        Route::get('/queues/all', [AllQueuesController::class, 'index'])
+            ->name('queue-metrics.queues.all');
+        Route::get('/servers', [AllServersController::class, 'index'])
+            ->name('queue-metrics.servers.index');
+        Route::get('/workers/all', [AllWorkersController::class, 'index'])
+            ->name('queue-metrics.workers.all');
+
+        // Job metrics (single job)
         Route::get('/jobs/{jobClass}', [JobMetricsController::class, 'show'])
             ->name('queue-metrics.jobs.show');
 

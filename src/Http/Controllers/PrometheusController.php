@@ -6,7 +6,7 @@ namespace PHPeek\LaravelQueueMetrics\Http\Controllers;
 
 use Illuminate\Http\Response;
 use PHPeek\LaravelQueueMetrics\Config\QueueMetricsConfig;
-use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Services\OverviewQueryService;
 use PHPeek\LaravelQueueMetrics\Services\ServerMetricsService;
 use Spatie\Prometheus\Facades\Prometheus;
 
@@ -16,9 +16,9 @@ use Spatie\Prometheus\Facades\Prometheus;
 final readonly class PrometheusController
 {
     public function __construct(
-        private MetricsQueryService $metricsQuery,
-        private QueueMetricsConfig $config,
-        private ?ServerMetricsService $serverMetrics = null,
+        private readonly OverviewQueryService $metricsQuery,
+        private readonly QueueMetricsConfig $config,
+        private readonly ?ServerMetricsService $serverMetrics = null,
     ) {}
 
     public function __invoke(): Response
@@ -30,7 +30,7 @@ final readonly class PrometheusController
         // Register gauges
         Prometheus::addGauge(
             'queues_total',
-            (float) $overview['total_queues'],
+            (float) count($overview['queues']),
             null,
             $namespace,
             'Total number of queues'
@@ -38,15 +38,17 @@ final readonly class PrometheusController
 
         Prometheus::addCounter(
             'jobs_processed_total',
-            (int) $overview['total_jobs_processed'],
+            is_int($overview['workers']['total_jobs_processed']) ? $overview['workers']['total_jobs_processed'] : 0,
             null,
             $namespace,
             'Total number of jobs processed'
         );
 
+        // Note: total_jobs_failed would need to be aggregated from job metrics
+        // Currently not available in overview structure
         Prometheus::addCounter(
             'jobs_failed_total',
-            (int) $overview['total_jobs_failed'],
+            0, // Would need to be calculated from job-level metrics
             null,
             $namespace,
             'Total number of jobs failed'
@@ -54,15 +56,17 @@ final readonly class PrometheusController
 
         Prometheus::addGauge(
             'workers_active',
-            (float) $overview['total_active_workers'],
+            is_numeric($overview['workers']['active']) ? (float) $overview['workers']['active'] : 0.0,
             null,
             $namespace,
             'Number of active workers'
         );
 
+        // Note: health_score would need to be calculated from health metrics
+        // Currently not available in overview structure
         Prometheus::addGauge(
             'health_score',
-            (float) $overview['health_score'],
+            0.0, // Would need to be calculated from health metrics
             null,
             $namespace,
             'Overall health score (0-100)'
@@ -73,6 +77,9 @@ final readonly class PrometheusController
             try {
                 $serverMetrics = $this->serverMetrics->getCurrentMetrics();
             } catch (\Throwable $e) {
+                logger()->warning('Failed to retrieve server metrics', [
+                    'error' => $e->getMessage(),
+                ]);
                 $serverMetrics = ['available' => false];
             }
         } else {

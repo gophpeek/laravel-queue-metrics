@@ -6,7 +6,9 @@ namespace PHPeek\LaravelQueueMetrics\Repositories;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Queue;
+use PHPeek\LaravelQueueMetrics\Events\HealthScoreChanged;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Support\MetricsConstants;
 use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 
 /**
@@ -42,7 +44,7 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
     }
 
     /**
-     * @param array<string, mixed> $metrics
+     * @param  array<string, mixed>  $metrics
      */
     public function recordSnapshot(
         string $connection,
@@ -63,7 +65,7 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
 
         // Add to time-series (sorted set)
         $driver->addToSortedSet($timestampKey, [
-            json_encode($metrics, JSON_THROW_ON_ERROR) => $now->timestamp,
+            json_encode($metrics, JSON_THROW_ON_ERROR) => (int) $now->timestamp,
         ], $ttl);
 
         // Keep only recent snapshots (last 1000)
@@ -120,6 +122,26 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
             $score >= 50.0 => 'warning',
             default => 'critical',
         };
+
+        // Check if health score changed significantly and dispatch event
+        $previousScore = $this->getPreviousHealthScore($connection, $queue);
+        if ($previousScore !== null) {
+            $scoreChange = abs($score - $previousScore);
+            $threshold = MetricsConstants::HEALTH_SCORE_CHANGE_THRESHOLD;
+
+            if ($scoreChange >= $threshold) {
+                HealthScoreChanged::dispatch(
+                    $connection,
+                    $queue,
+                    round($score, 2),
+                    round($previousScore, 2),
+                    $status
+                );
+            }
+        }
+
+        // Store current score for next comparison
+        $this->storeCurrentHealthScore($connection, $queue, $score);
 
         return ['status' => $status, 'score' => $score];
     }
@@ -180,7 +202,7 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
     }
 
     /**
-     * @param array<string, mixed> $metrics
+     * @param  array<string, mixed>  $metrics
      */
     private function calculateHealthScore(array $metrics): float
     {
@@ -221,5 +243,30 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
     private function scanKeys(string $pattern): array
     {
         return $this->redis->driver()->scanKeys($pattern);
+    }
+
+    /**
+     * Get previous health score for comparison.
+     */
+    private function getPreviousHealthScore(string $connection, string $queue): ?float
+    {
+        $key = $this->redis->key('health_score', $connection, $queue);
+        $score = $this->redis->driver()->get($key);
+
+        if ($score === null || $score === false) {
+            return null;
+        }
+
+        return is_numeric($score) ? (float) $score : null;
+    }
+
+    /**
+     * Store current health score for next comparison.
+     */
+    private function storeCurrentHealthScore(string $connection, string $queue, float $score): void
+    {
+        $key = $this->redis->key('health_score', $connection, $queue);
+        $ttl = 3600; // Keep for 1 hour
+        $this->redis->driver()->set($key, (string) $score, $ttl);
     }
 }

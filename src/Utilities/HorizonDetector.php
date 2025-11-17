@@ -20,7 +20,14 @@ final class HorizonDetector
      */
     public static function detect(): HorizonContext
     {
+        // $_SERVER['argv'] is mixed, ensure it's an array of strings
         $argv = $_SERVER['argv'] ?? [];
+
+        if (! is_array($argv)) {
+            return HorizonContext::notHorizon();
+        }
+
+        /** @var array<int, string> $argv */
 
         // Check if running horizon:work command
         if (! self::isHorizonWork($argv)) {
@@ -28,9 +35,12 @@ final class HorizonDetector
         }
 
         // Extract Horizon arguments
-        $supervisorName = self::extractArgument($argv, '--supervisor-name');
+        // Try both --supervisor and --supervisor-name (Horizon uses --supervisor)
+        $supervisorName = self::extractArgument($argv, '--supervisor')
+            ?? self::extractArgument($argv, '--supervisor-name');
         $parentId = self::extractArgument($argv, '--parent-id');
-        $workersName = self::extractArgument($argv, '--workers-name');
+        $workersName = self::extractArgument($argv, '--workers-name')
+            ?? self::extractArgument($argv, '--name');
 
         // Supervisor name is required for Horizon
         if ($supervisorName === null) {
@@ -46,6 +56,8 @@ final class HorizonDetector
 
     /**
      * Check if horizon:work command is in argv.
+     *
+     * @param  array<int, string>  $argv
      */
     private static function isHorizonWork(array $argv): bool
     {
@@ -61,6 +73,8 @@ final class HorizonDetector
     /**
      * Extract argument value from argv.
      * Supports both --arg=value and --arg value formats.
+     *
+     * @param  array<int, string>  $argv
      */
     private static function extractArgument(array $argv, string $name): ?string
     {
@@ -70,7 +84,7 @@ final class HorizonDetector
             $arg = $argv[$i];
 
             // Format: --arg=value
-            if (str_starts_with($arg, $name . '=')) {
+            if (str_starts_with($arg, $name.'=')) {
                 return substr($arg, strlen($name) + 1);
             }
 

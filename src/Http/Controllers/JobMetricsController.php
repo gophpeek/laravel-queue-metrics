@@ -6,7 +6,7 @@ namespace PHPeek\LaravelQueueMetrics\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Services\JobMetricsQueryService;
 
 /**
  * HTTP controller for job metrics endpoints.
@@ -14,7 +14,7 @@ use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
 final class JobMetricsController extends Controller
 {
     public function __construct(
-        private readonly MetricsQueryService $metricsQuery,
+        private readonly JobMetricsQueryService $metricsQuery,
     ) {}
 
     public function show(string $jobClass): JsonResponse

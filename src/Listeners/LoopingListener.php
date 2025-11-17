@@ -24,7 +24,7 @@ final readonly class LoopingListener
     {
         $workerId = $this->getWorkerId();
         $connection = $event->connectionName;
-        $queue = $event->queue ?? 'default';
+        $queue = $event->queue; // Property is always set (string type)
 
         // Record worker heartbeat on each loop iteration
         // This provides:

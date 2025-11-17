@@ -33,7 +33,7 @@ final readonly class RecordJobFailureAction
             jobClass: $jobClass,
             connection: $connection,
             queue: $queue,
-            exception: $exception->getMessage() . ' in ' . $exception->getFile() . ':' . $exception->getLine(),
+            exception: $exception->getMessage().' in '.$exception->getFile().':'.$exception->getLine(),
             failedAt: Carbon::now(),
         );
     }

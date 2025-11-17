@@ -19,7 +19,7 @@ interface QueueMetricsRepository
     /**
      * Record queue metrics snapshot.
      *
-     * @param array<string, mixed> $metrics
+     * @param  array<string, mixed>  $metrics
      */
     public function recordSnapshot(
         string $connection,

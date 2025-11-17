@@ -12,7 +12,7 @@ final class PercentileCalculator
     /**
      * Calculate percentile from sorted or unsorted data.
      *
-     * @param array<int, float> $values
+     * @param  array<int, float>  $values
      */
     public function calculate(array $values, float $percentile): float
     {
@@ -38,8 +38,8 @@ final class PercentileCalculator
     /**
      * Calculate multiple percentiles at once.
      *
-     * @param array<int, float> $values
-     * @param array<int, float> $percentiles
+     * @param  array<int, float>  $values
+     * @param  array<int, float>  $percentiles
      * @return array<string, float>
      */
     public function calculateMultiple(array $values, array $percentiles): array
@@ -55,7 +55,7 @@ final class PercentileCalculator
 
         $results = [];
         foreach ($percentiles as $percentile) {
-            $key = "p" . (int) $percentile;
+            $key = 'p'.(int) $percentile;
             $results[$key] = $this->calculate($values, $percentile);
         }
 
@@ -65,7 +65,7 @@ final class PercentileCalculator
     /**
      * Calculate standard deviation.
      *
-     * @param array<int, float> $values
+     * @param  array<int, float>  $values
      */
     public function standardDeviation(array $values): float
     {

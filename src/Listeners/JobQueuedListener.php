@@ -22,7 +22,10 @@ final readonly class JobQueuedListener
     {
         $connection = $event->connectionName;
         $queue = $event->job->queue ?? 'default';
-        $jobClass = get_class($event->job);
+
+        // Job can be an object or a string depending on the queue driver
+        $job = $event->job;
+        $jobClass = is_object($job) ? get_class($job) : (string) $job;
 
         // Store queued timestamp for time-to-start calculation
         // When JobProcessing fires, we can calculate: processing_started - queued_at

@@ -274,7 +274,7 @@ final readonly class TrendAnalysisService
     /**
      * Calculate linear regression trend.
      *
-     * @param array<array{timestamp: int, depth?: int, jobs_processed?: int}> $data
+     * @param  array<array{timestamp: int, depth?: int, jobs_processed?: int}>  $data
      * @return array{slope: float, intercept: float, r_squared: float}
      */
     private function calculateLinearTrend(array $data): array
@@ -334,7 +334,7 @@ final readonly class TrendAnalysisService
     /**
      * Forecast next value using linear extrapolation.
      *
-     * @param array<array{timestamp: int, depth?: int}> $data
+     * @param  array<array{timestamp: int, depth?: int}>  $data
      */
     private function forecastNextValue(array $data, int $intervalSeconds): float
     {

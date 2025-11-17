@@ -20,13 +20,20 @@ final readonly class JobRetryRequestedListener
 
     public function handle(JobRetryRequested $event): void
     {
-        $job = $event->job;
-        $payload = $job->payload();
+        // $event->job is stdClass - contains raw job data from Laravel queue
+        $jobStdClass = $event->job;
 
-        $jobId = $job->getJobId();
+        // Extract job metadata from stdClass
+        $jobId = is_string($jobStdClass->id ?? null) ? $jobStdClass->id : 'unknown';
+        $connection = is_string($jobStdClass->connection ?? null) ? $jobStdClass->connection : 'redis';
+        $queue = is_string($jobStdClass->queue ?? null) ? $jobStdClass->queue : 'default';
+
+        // Get payload - event provides helper method that decodes JSON
+        /** @var array{displayName?: string, attempts?: int} $payload */
+        $payload = $event->payload();
+
         $jobClass = $payload['displayName'] ?? 'UnknownJob';
-        $connection = $event->connectionName;
-        $queue = $job->getQueue();
+        $attemptNumber = $payload['attempts'] ?? 1;
 
         // Record retry request
         // This helps track:
@@ -39,7 +46,7 @@ final readonly class JobRetryRequestedListener
             connection: $connection,
             queue: $queue,
             retryRequestedAt: Carbon::now(),
-            attemptNumber: $payload['attempts'] ?? 1,
+            attemptNumber: $attemptNumber,
         );
     }
 }

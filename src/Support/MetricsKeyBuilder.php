@@ -13,7 +13,9 @@ final readonly class MetricsKeyBuilder
 
     public function __construct(?string $prefix = null)
     {
-        $this->prefix = $prefix ?? config('queue-metrics.storage.prefix', 'queue_metrics');
+        /** @var string $configPrefix */
+        $configPrefix = config('queue-metrics.storage.prefix', 'queue_metrics');
+        $this->prefix = $prefix ?? $configPrefix;
     }
 
     /**
@@ -21,7 +23,7 @@ final readonly class MetricsKeyBuilder
      */
     public function key(string ...$segments): string
     {
-        return $this->prefix . ':' . implode(':', $segments);
+        return $this->prefix.':'.implode(':', $segments);
     }
 
     /**
@@ -29,6 +31,7 @@ final readonly class MetricsKeyBuilder
      */
     public function getTtl(string $type): int
     {
+        /** @var int */
         return config("queue-metrics.storage.ttl.{$type}", 3600);
     }
 }

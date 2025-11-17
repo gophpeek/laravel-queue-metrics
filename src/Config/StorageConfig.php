@@ -10,7 +10,7 @@ namespace PHPeek\LaravelQueueMetrics\Config;
 final readonly class StorageConfig
 {
     /**
-     * @param array<string, int> $ttls
+     * @param  array<string, int>  $ttls
      */
     public function __construct(
         public string $driver,
@@ -20,7 +20,7 @@ final readonly class StorageConfig
     ) {}
 
     /**
-     * @param array<string, mixed> $config
+     * @param  array<string, mixed>  $config
      */
     public static function fromArray(array $config): self
     {

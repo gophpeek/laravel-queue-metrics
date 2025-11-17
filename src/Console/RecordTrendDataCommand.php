@@ -6,8 +6,10 @@ namespace PHPeek\LaravelQueueMetrics\Console;
 
 use Illuminate\Console\Command;
 use PHPeek\LaravelQueueMetrics\Actions\RecordQueueDepthHistoryAction;
-use PHPeek\LaravelQueueMetrics\Actions\RecordThroughputHistoryAction;
+use PHPeek\LaravelQueueMetrics\Events\WorkerEfficiencyChanged;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
+use PHPeek\LaravelQueueMetrics\Services\QueueMetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Support\MetricsConstants;
 use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 
 /**
@@ -22,7 +24,7 @@ final class RecordTrendDataCommand extends Command
     public function __construct(
         private readonly WorkerHeartbeatRepository $workerHeartbeat,
         private readonly RecordQueueDepthHistoryAction $recordQueueDepth,
-        private readonly RecordThroughputHistoryAction $recordThroughput,
+        private readonly QueueMetricsQueryService $metricsQuery,
         private readonly RedisMetricsStore $storage,
     ) {
         parent::__construct();
@@ -35,41 +37,30 @@ final class RecordTrendDataCommand extends Command
         $recordedQueues = 0;
         $recordedWorkers = 0;
 
-        // Scan for active queues in Redis
-        $redis = $this->storage->driver();
-        $pattern = $this->storage->key('queue_snapshot', '*', '*');
+        // Get all queue depths from metricsQuery
+        try {
+            /** @var array<int, array{connection?: string, queue?: string, depth?: array{pending?: int, delayed?: int, reserved?: int}}> $allQueues */
+            $allQueues = $this->metricsQuery->getAllQueues();
 
-        /** @var array<string> $keys */
-        $keys = $redis->scanKeys($pattern);
+            foreach ($allQueues as $queueData) {
+                $connection = $queueData['connection'] ?? 'redis';
+                $queue = $queueData['queue'] ?? 'default';
 
-        foreach ($keys as $key) {
-            try {
-                // Extract connection and queue from key
-                $parts = explode(':', $key);
-                if (count($parts) < 4) {
-                    continue;
-                }
+                // Queue data already contains depth info
+                $depthData = $queueData['depth'] ?? [];
+                $depth = ($depthData['pending'] ?? 0)
+                    + ($depthData['delayed'] ?? 0)
+                    + ($depthData['reserved'] ?? 0);
 
-                $connectionName = $parts[2] ?? 'default';
-                $queueName = $parts[3] ?? 'default';
-
-                // Get snapshot data
-                /** @var array<string, string> $snapshot */
-                $snapshot = $redis->getHash($key);
-
-                if (! empty($snapshot)) {
-                    $depth = (int) ($snapshot['size'] ?? 0);
-                    $jobsProcessed = (int) ($snapshot['jobs_processed'] ?? 0);
-
-                    $this->recordQueueDepth->execute($connectionName, $queueName, $depth);
-                    $this->recordThroughput->execute($connectionName, $queueName, $jobsProcessed);
-
-                    $recordedQueues++;
-                }
-            } catch (\Exception $e) {
-                $this->warn("Failed to record trend for key {$key} - {$e->getMessage()}");
+                $this->recordQueueDepth->execute($connection, $queue, $depth);
+                $recordedQueues++;
             }
+        } catch (\Exception $e) {
+            $this->warn("Failed to record queue depths - {$e->getMessage()}");
         }
+
+        // Throughput is calculated from queue metrics
+        // No additional recording needed here
 
         // Record worker efficiency metrics
         try {
@@ -107,13 +98,34 @@ final class RecordTrendDataCommand extends Command
 
                 // Cleanup old data
                 $cutoff = $now - (86400 * 7); // Keep 7 days
-                $redis->pipeline(function ($pipe) use ($key, $cutoff) {
-                    /** @var \Illuminate\Redis\Connections\Connection $pipe */
-                    $pipe->zremrangebyscore($key, '-inf', (string) $cutoff);
-                    $pipe->expire($key, 86400 * 8);
-                });
+                $redis->removeSortedSetByScore($key, '-inf', (string) $cutoff);
 
                 $recordedWorkers = $workerCount;
+
+                // Check if efficiency changed significantly and dispatch event
+                $previousEfficiency = $this->getPreviousEfficiency($redis, $key);
+                if ($previousEfficiency !== null) {
+                    $changePercentage = abs($efficiency - $previousEfficiency);
+                    $threshold = MetricsConstants::EFFICIENCY_CHANGE_THRESHOLD;
+
+                    if ($changePercentage >= $threshold) {
+                        $idleWorkers = 0;
+                        foreach ($workers as $worker) {
+                            $workerTime = $worker->busyTimeSeconds + $worker->idleTimeSeconds;
+                            if ($workerTime > 0 && ($worker->idleTimeSeconds / $workerTime) > 0.8) {
+                                $idleWorkers++;
+                            }
+                        }
+
+                        WorkerEfficiencyChanged::dispatch(
+                            round($efficiency, 2),
+                            round($previousEfficiency, 2),
+                            round($changePercentage, 2),
+                            $workerCount - $idleWorkers,
+                            $idleWorkers
+                        );
+                    }
+                }
             }
         } catch (\Exception $e) {
             $this->warn("Failed to record worker efficiency - {$e->getMessage()}");
@@ -122,5 +134,31 @@ final class RecordTrendDataCommand extends Command
         $this->info("Recorded trends for {$recordedQueues} queues and {$recordedWorkers} workers");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Get previous efficiency from history for comparison.
+     */
+    private function getPreviousEfficiency(RedisMetricsStore $redis, string $key): ?float
+    {
+        // Get all data points and take second-to-last (previous efficiency)
+        /** @var array<string> $dataPoints */
+        $dataPoints = $redis->getSortedSetByScore($key, '-inf', '+inf');
+
+        if (count($dataPoints) < 2) {
+            return null; // Need at least 2 data points to compare
+        }
+
+        // Get second-to-last element
+        $previousDataPoint = $dataPoints[count($dataPoints) - 2];
+        $data = json_decode($previousDataPoint, true);
+
+        if (! is_array($data) || ! isset($data['efficiency'])) {
+            return null;
+        }
+
+        $efficiency = $data['efficiency'];
+
+        return is_numeric($efficiency) ? (float) $efficiency : null;
     }
 }

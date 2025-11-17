@@ -263,8 +263,14 @@ final readonly class LaravelQueueInspector implements QueueInspector
                 oldestDelayedJobAge: $oldestDelayedAge,
                 measuredAt: Carbon::now(),
             );
-        } catch (ReflectionException) {
+        } catch (ReflectionException $e) {
             // Database reflection failed, use generic fallback
+            logger()->debug('Database reflection failed, using generic fallback', [
+                'connection' => $connection,
+                'queue' => $queueName,
+                'error' => $e->getMessage(),
+            ]);
+
             return $this->getGenericQueueDepth($queueInstance, $connection, $queueName);
         }
     }
@@ -285,8 +291,13 @@ final readonly class LaravelQueueInspector implements QueueInspector
                 $size = $queueInstance->size($queue);
                 // Use size as pending count (best approximation we have)
                 $pendingJobs = is_int($size) ? $size : 0;
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
                 // size() failed, return zeros
+                logger()->debug('Queue size() method failed', [
+                    'connection' => $connection,
+                    'queue' => $queue,
+                    'error' => $e->getMessage(),
+                ]);
                 $pendingJobs = 0;
             }
         }
@@ -367,7 +378,13 @@ final readonly class LaravelQueueInspector implements QueueInspector
                 oldestDelayedJobAge: $oldestDelayed,
                 measuredAt: Carbon::now(),
             );
-        } catch (ReflectionException) {
+        } catch (ReflectionException $e) {
+            logger()->debug('Redis queue inspection failed', [
+                'connection' => $connection,
+                'queue' => $queueName,
+                'error' => $e->getMessage(),
+            ]);
+
             return new QueueDepthData(
                 connection: $connection,
                 queue: $queueName,
@@ -380,5 +397,4 @@ final readonly class LaravelQueueInspector implements QueueInspector
             );
         }
     }
-
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPeek\LaravelQueueMetrics\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
-use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Services\QueueMetricsQueryService;
 
 /**
  * Queue depth monitoring controller.
@@ -13,7 +13,7 @@ use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
 final readonly class QueueDepthController
 {
     public function __construct(
-        private MetricsQueryService $metricsService,
+        private readonly QueueMetricsQueryService $metricsService,
     ) {}
 
     /**

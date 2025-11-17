@@ -13,7 +13,7 @@ use PHPeek\LaravelQueueMetrics\Services\ServerMetricsService;
 final readonly class ServerMetricsController
 {
     public function __construct(
-        private ServerMetricsService $serverMetrics,
+        private readonly ServerMetricsService $serverMetrics,
     ) {}
 
     /**
@@ -36,7 +36,7 @@ final readonly class ServerMetricsController
         $health = $this->serverMetrics->getHealthStatus();
         $metrics = $this->serverMetrics->getCurrentMetrics();
 
-        if (!$metrics['available']) {
+        if (! $metrics['available']) {
             return response()->json([
                 'health' => $health,
                 'metrics' => null,

@@ -6,7 +6,6 @@ namespace PHPeek\LaravelQueueMetrics\Actions;
 
 use PHPeek\LaravelQueueMetrics\Enums\WorkerState;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
-use PHPeek\LaravelQueueMetrics\Utilities\HorizonDetector;
 use PHPeek\SystemMetrics\ProcessMetrics;
 
 /**

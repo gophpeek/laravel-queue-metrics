@@ -4,92 +4,24 @@ declare(strict_types=1);
 
 namespace PHPeek\LaravelQueueMetrics\Services;
 
-use Gophpeek\SystemMetrics\SystemMetrics;
-
 /**
  * Service for collecting server-wide resource metrics.
  */
 final readonly class ServerMetricsService
 {
-    public function __construct(
-        private SystemMetrics $systemMetrics,
-    ) {}
-
     /**
      * Get current server resource metrics.
+     *
+     * Note: SystemMetrics package disabled due to macOS compatibility issues.
+     * For production Linux environments, consider re-enabling with proper error handling.
      *
      * @return array<string, mixed>
      */
     public function getCurrentMetrics(): array
     {
-        $result = $this->systemMetrics->getMetrics();
-
-        if ($result->isFailure()) {
-            return [
-                'available' => false,
-                'error' => $result->getError()->message,
-            ];
-        }
-
-        $metrics = $result->getValue();
-
         return [
-            'available' => true,
-            'timestamp' => time(),
-            'cpu' => [
-                'count' => $metrics->cpu->count,
-                'usage_percent' => round($metrics->cpu->usagePercent, 2),
-                'user_percent' => round($metrics->cpu->userPercent, 2),
-                'system_percent' => round($metrics->cpu->systemPercent, 2),
-                'idle_percent' => round($metrics->cpu->idlePercent, 2),
-                'load_average' => [
-                    '1min' => round($metrics->cpu->loadAverage->oneMinute, 2),
-                    '5min' => round($metrics->cpu->loadAverage->fiveMinutes, 2),
-                    '15min' => round($metrics->cpu->loadAverage->fifteenMinutes, 2),
-                ],
-            ],
-            'memory' => [
-                'total_bytes' => $metrics->memory->totalBytes,
-                'total_mb' => round($metrics->memory->totalBytes / 1024 / 1024, 2),
-                'total_gb' => round($metrics->memory->totalBytes / 1024 / 1024 / 1024, 2),
-                'available_bytes' => $metrics->memory->availableBytes,
-                'available_mb' => round($metrics->memory->availableBytes / 1024 / 1024, 2),
-                'available_gb' => round($metrics->memory->availableBytes / 1024 / 1024 / 1024, 2),
-                'used_bytes' => $metrics->memory->usedBytes,
-                'used_mb' => round($metrics->memory->usedBytes / 1024 / 1024, 2),
-                'used_gb' => round($metrics->memory->usedBytes / 1024 / 1024 / 1024, 2),
-                'usage_percent' => round($metrics->memory->usagePercent, 2),
-                'cached_bytes' => $metrics->memory->cachedBytes,
-                'cached_mb' => round($metrics->memory->cachedBytes / 1024 / 1024, 2),
-                'buffers_bytes' => $metrics->memory->buffersBytes,
-                'buffers_mb' => round($metrics->memory->buffersBytes / 1024 / 1024, 2),
-            ],
-            'disk' => array_map(function ($disk) {
-                return [
-                    'mountpoint' => $disk->mountpoint,
-                    'filesystem' => $disk->filesystem,
-                    'total_bytes' => $disk->totalBytes,
-                    'total_gb' => round($disk->totalBytes / 1024 / 1024 / 1024, 2),
-                    'used_bytes' => $disk->usedBytes,
-                    'used_gb' => round($disk->usedBytes / 1024 / 1024 / 1024, 2),
-                    'available_bytes' => $disk->availableBytes,
-                    'available_gb' => round($disk->availableBytes / 1024 / 1024 / 1024, 2),
-                    'usage_percent' => round($disk->usagePercent, 2),
-                ];
-            }, $metrics->disks),
-            'network' => array_map(function ($interface) {
-                return [
-                    'name' => $interface->name,
-                    'bytes_sent' => $interface->bytesSent,
-                    'bytes_received' => $interface->bytesReceived,
-                    'packets_sent' => $interface->packetsSent,
-                    'packets_received' => $interface->packetsReceived,
-                    'errors_in' => $interface->errorsIn,
-                    'errors_out' => $interface->errorsOut,
-                    'drops_in' => $interface->dropsIn,
-                    'drops_out' => $interface->dropsOut,
-                ];
-            }, $metrics->network),
+            'available' => false,
+            'error' => 'Server metrics temporarily disabled (SystemMetrics compatibility issue on development environment)',
         ];
     }
 

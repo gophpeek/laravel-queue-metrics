@@ -6,7 +6,7 @@ namespace PHPeek\LaravelQueueMetrics\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Services\QueueMetricsQueryService;
 
 /**
  * HTTP controller for queue metrics endpoints.
@@ -14,7 +14,7 @@ use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
 final class QueueMetricsController extends Controller
 {
     public function __construct(
-        private readonly MetricsQueryService $metricsQuery,
+        private readonly QueueMetricsQueryService $metricsQuery,
     ) {}
 
     public function show(string $connection, string $queue): JsonResponse

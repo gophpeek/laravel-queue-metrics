@@ -14,7 +14,8 @@ final class AllowIps
     {
         $allowedIps = config('queue-metrics.allowed_ips');
 
-        if ($allowedIps === null) {
+        // Allow access if no IPs are configured or config is invalid
+        if ($allowedIps === null || ! is_array($allowedIps)) {
             return $next($request);
         }
 

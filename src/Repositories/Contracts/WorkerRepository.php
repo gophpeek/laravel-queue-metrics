@@ -28,6 +28,7 @@ interface WorkerRepository
      */
     public function updateWorkerActivity(
         int $pid,
+        string $hostname,
         string $status,
         ?string $currentJob = null,
         int $jobsProcessed = 0,
@@ -37,12 +38,12 @@ interface WorkerRepository
     /**
      * Unregister a worker.
      */
-    public function unregisterWorker(int $pid): void;
+    public function unregisterWorker(int $pid, string $hostname): void;
 
     /**
      * Get statistics for a specific worker.
      */
-    public function getWorkerStats(int $pid): ?WorkerStatsData;
+    public function getWorkerStats(int $pid, string $hostname): ?WorkerStatsData;
 
     /**
      * Get all active workers.

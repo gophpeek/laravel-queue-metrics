@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PHPeek\LaravelQueueMetrics\Console;
 
 use Illuminate\Console\Command;
-use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Services\WorkerMetricsQueryService;
 
 /**
  * Console command to detect and mark stale workers as crashed.
@@ -24,7 +24,7 @@ final class DetectStaleWorkersCommand extends Command
     protected $description = 'Detect and mark stale workers as crashed';
 
     public function __construct(
-        private readonly MetricsQueryService $metricsService,
+        private readonly WorkerMetricsQueryService $metricsService,
     ) {
         parent::__construct();
     }

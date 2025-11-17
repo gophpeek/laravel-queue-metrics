@@ -7,6 +7,7 @@ namespace PHPeek\LaravelQueueMetrics\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use PHPeek\LaravelQueueMetrics\Services\TrendAnalysisService;
+use PHPeek\LaravelQueueMetrics\Support\MetricsConstants;
 
 /**
  * Provides trend analysis and forecasting endpoints.
@@ -22,8 +23,12 @@ final readonly class TrendAnalysisController
      */
     public function queueDepth(Request $request, string $connection, string $queue): JsonResponse
     {
-        $periodSeconds = (int) $request->query('period', 3600);
-        $intervalSeconds = (int) $request->query('interval', 60);
+        $periodSeconds = (int) $request->query('period', MetricsConstants::DEFAULT_TREND_PERIOD);
+        $intervalSeconds = (int) $request->query('interval', MetricsConstants::DEFAULT_TREND_INTERVAL);
+
+        // Validate and clamp parameters
+        $periodSeconds = MetricsConstants::clamp($periodSeconds, 1, MetricsConstants::MAX_TREND_PERIOD);
+        $intervalSeconds = MetricsConstants::clamp($intervalSeconds, MetricsConstants::MIN_TREND_INTERVAL, MetricsConstants::MAX_TREND_INTERVAL);
 
         $trend = $this->trendAnalysis->analyzeQueueDepthTrend(
             $connection,
@@ -40,7 +45,10 @@ final readonly class TrendAnalysisController
      */
     public function throughput(Request $request, string $connection, string $queue): JsonResponse
     {
-        $periodSeconds = (int) $request->query('period', 3600);
+        $periodSeconds = (int) $request->query('period', MetricsConstants::DEFAULT_TREND_PERIOD);
+
+        // Validate and clamp parameter
+        $periodSeconds = MetricsConstants::clamp($periodSeconds, 1, MetricsConstants::MAX_TREND_PERIOD);
 
         $trend = $this->trendAnalysis->analyzeThroughputTrend(
             $connection,
@@ -56,7 +64,10 @@ final readonly class TrendAnalysisController
      */
     public function workerEfficiency(Request $request): JsonResponse
     {
-        $periodSeconds = (int) $request->query('period', 3600);
+        $periodSeconds = (int) $request->query('period', MetricsConstants::DEFAULT_TREND_PERIOD);
+
+        // Validate and clamp parameter
+        $periodSeconds = MetricsConstants::clamp($periodSeconds, 1, MetricsConstants::MAX_TREND_PERIOD);
 
         $trend = $this->trendAnalysis->analyzeWorkerEfficiencyTrend($periodSeconds);
 

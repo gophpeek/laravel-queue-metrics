@@ -8,7 +8,9 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerHeartbeat;
 use PHPeek\LaravelQueueMetrics\Enums\WorkerState;
+use PHPeek\LaravelQueueMetrics\Exceptions\LuaScriptException;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
+use PHPeek\LaravelQueueMetrics\Support\LuaScriptCache;
 use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 
 /**
@@ -37,94 +39,27 @@ final readonly class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRe
         $indexKey = $this->redis->key('workers', 'all');
 
         $now = Carbon::now();
-
-        // Get existing data to calculate state durations
-        /** @var array<string, string> */
-        $existingData = $driver->getHash($workerKey) ?: [];
-        $previousState = isset($existingData['state'])
-            ? WorkerState::from($existingData['state'])
-            : null;
-
-        $idleTime = (float) ($existingData['idle_time_seconds'] ?? 0.0);
-        $busyTime = (float) ($existingData['busy_time_seconds'] ?? 0.0);
-        $lastHeartbeat = isset($existingData['last_heartbeat'])
-            ? Carbon::createFromTimestamp((int) $existingData['last_heartbeat'])
-            : $now;
-
-        // Calculate time since last heartbeat
-        $timeSinceLastHeartbeat = $now->diffInSeconds($lastHeartbeat, true);
-
-        // Update time in previous state
-        if ($previousState === WorkerState::IDLE) {
-            $idleTime += $timeSinceLastHeartbeat;
-        } elseif ($previousState === WorkerState::BUSY) {
-            $busyTime += $timeSinceLastHeartbeat;
-        }
-
-        $jobsProcessed = (int) ($existingData['jobs_processed'] ?? 0);
-
-        // If transitioning from BUSY to IDLE and we have a job, increment counter
-        if ($previousState === WorkerState::BUSY && $state === WorkerState::IDLE && $currentJobId === null) {
-            $jobsProcessed++;
-        }
-
-        $lastStateChange = $previousState !== $state
-            ? $now->timestamp
-            : (int) ($existingData['last_state_change'] ?? $now->timestamp);
-
-        // Track peak memory
-        $previousPeakMemory = (float) ($existingData['peak_memory_usage_mb'] ?? 0.0);
-        $peakMemoryUsageMb = max($previousPeakMemory, $memoryUsageMb);
-
         $ttl = $this->redis->getTtl('raw');
 
-        // Store worker data
-        $driver->pipeline(function ($pipe) use (
-            $workerKey,
-            $indexKey,
-            $workerId,
-            $connection,
-            $queue,
-            $state,
-            $currentJobId,
-            $currentJobClass,
-            $idleTime,
-            $busyTime,
-            $jobsProcessed,
-            $pid,
-            $hostname,
-            $now,
-            $lastStateChange,
-            $memoryUsageMb,
-            $cpuUsagePercent,
-            $peakMemoryUsageMb,
-            $ttl
-        ) {
-            $pipe->setHash($workerKey, [
-                'worker_id' => $workerId,
-                'connection' => $connection,
-                'queue' => $queue,
-                'state' => $state->value,
-                'last_heartbeat' => $now->timestamp,
-                'last_state_change' => $lastStateChange,
-                'current_job_id' => $currentJobId ?? '',
-                'current_job_class' => $currentJobClass ?? '',
-                'idle_time_seconds' => $idleTime,
-                'busy_time_seconds' => $busyTime,
-                'jobs_processed' => $jobsProcessed,
-                'pid' => $pid,
-                'hostname' => $hostname,
-                'memory_usage_mb' => $memoryUsageMb,
-                'cpu_usage_percent' => $cpuUsagePercent,
-                'peak_memory_usage_mb' => $peakMemoryUsageMb,
-            ]);
+        // Prepare script arguments
+        $keys = [$workerKey, $indexKey];
+        $args = [
+            $workerId, // ARGV[1]
+            $connection, // ARGV[2]
+            $queue, // ARGV[3]
+            $state->value, // ARGV[4]
+            $currentJobId ?? '', // ARGV[5]
+            $currentJobClass ?? '', // ARGV[6]
+            (string) $pid, // ARGV[7]
+            $hostname, // ARGV[8]
+            (string) $memoryUsageMb, // ARGV[9]
+            (string) $cpuUsagePercent, // ARGV[10]
+            (string) $now->timestamp, // ARGV[11]
+            (string) $ttl, // ARGV[12]
+        ];
 
-            // Add to index with heartbeat as score for easy stale detection
-            $pipe->addToSortedSet($indexKey, [$workerId => $now->timestamp], $ttl);
-
-            // Set TTL
-            $pipe->expire($workerKey, $ttl);
-        });
+        // Execute Lua script with SHA caching for performance
+        $this->executeScriptWithCache($driver, $keys, $args);
     }
 
     public function transitionState(
@@ -134,6 +69,7 @@ final readonly class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRe
     ): void {
         $driver = $this->redis->driver();
         $workerKey = $this->redis->key('worker', $workerId);
+        $ttl = $this->redis->getTtl('raw');
 
         // Check if worker exists
         if (! $driver->exists($workerKey)) {
@@ -144,6 +80,9 @@ final readonly class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRe
             'state' => $newState->value,
             'last_state_change' => $transitionTime->timestamp,
         ]);
+
+        // Refresh TTL on state transition
+        $driver->expire($workerKey, $ttl);
     }
 
     public function getWorker(string $workerId): ?WorkerHeartbeat
@@ -272,5 +211,76 @@ final readonly class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRe
         }
 
         return count($oldWorkerIds);
+    }
+
+    /**
+     * Execute Lua script with SHA1 caching for optimal performance.
+     *
+     * Uses EVALSHA when script is cached, falls back to EVAL + SCRIPT LOAD
+     * on first call or if script was evicted from Redis cache.
+     *
+     * @param  array<string>  $keys
+     * @param  array<string>  $args
+     *
+     * @throws LuaScriptException
+     */
+    private function executeScriptWithCache(RedisMetricsStore $driver, array $keys, array $args): void
+    {
+        $scriptPath = __DIR__.'/../Support/LuaScripts/UpdateWorkerHeartbeat.lua';
+        $scriptSha = LuaScriptCache::get($scriptPath);
+
+        // Get actual Laravel Redis connection
+        $connection = $driver->connection();
+
+        // If SHA not cached, load script and cache SHA
+        if ($scriptSha === null) {
+            $luaScript = file_get_contents($scriptPath);
+
+            if ($luaScript === false) {
+                throw LuaScriptException::failedToLoad($scriptPath);
+            }
+
+            // Load script into Redis and get SHA
+            // SCRIPT LOAD returns the SHA1 digest as a string
+            $loadedSha = $connection->command('SCRIPT', ['LOAD', $luaScript]);
+
+            if (! is_string($loadedSha)) {
+                throw LuaScriptException::invalidSha($scriptPath);
+            }
+
+            $scriptSha = $loadedSha;
+            LuaScriptCache::set($scriptPath, $scriptSha);
+        }
+
+        try {
+            // Try EVALSHA with cached SHA (fast path)
+            // Laravel's PhpRedisConnection uses variadic signature (variadic params)
+            // while PHPStan sees native Redis (array params) - both work correctly at runtime
+            /** @phpstan-ignore-next-line argument.type */
+            $connection->evalsha($scriptSha, count($keys), ...$keys, ...$args);
+        } catch (\Exception $e) {
+            // Script not in Redis cache (evicted or Redis restart)
+            // Fall back to EVAL and reload script
+            $luaScript = file_get_contents($scriptPath);
+
+            if ($luaScript === false) {
+                throw LuaScriptException::failedToLoad($scriptPath);
+            }
+
+            // Execute with EVAL and reload SHA for next time
+            // Laravel's PhpRedisConnection uses variadic signature (variadic params)
+            // while PHPStan sees native Redis (array params) - both work correctly at runtime
+            /** @phpstan-ignore-next-line argument.type */
+            $connection->eval($luaScript, count($keys), ...$keys, ...$args);
+
+            // Reload SHA for future calls
+            $reloadedSha = $connection->command('SCRIPT', ['LOAD', $luaScript]);
+
+            if (! is_string($reloadedSha)) {
+                throw LuaScriptException::invalidSha($scriptPath);
+            }
+
+            LuaScriptCache::set($scriptPath, $reloadedSha);
+        }
     }
 }

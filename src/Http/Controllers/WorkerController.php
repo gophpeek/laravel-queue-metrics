@@ -7,7 +7,7 @@ namespace PHPeek\LaravelQueueMetrics\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Services\WorkerMetricsQueryService;
 
 /**
  * HTTP controller for worker endpoints.
@@ -15,7 +15,7 @@ use PHPeek\LaravelQueueMetrics\Services\MetricsQueryService;
 final class WorkerController extends Controller
 {
     public function __construct(
-        private readonly MetricsQueryService $metricsQuery,
+        private readonly WorkerMetricsQueryService $metricsQuery,
     ) {}
 
     public function index(Request $request): JsonResponse

@@ -12,7 +12,9 @@ use PHPeek\LaravelQueueMetrics\DataTransferObjects\JobMetricsData;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\MemoryStats;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\ThroughputStats;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WindowStats;
+use PHPeek\LaravelQueueMetrics\Events\MetricsRecorded;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Support\MetricsConstants;
 use PHPeek\LaravelQueueMetrics\Utilities\PercentileCalculator;
 
 /**
@@ -32,7 +34,7 @@ final readonly class CalculateJobMetricsAction
     ): JobMetricsData {
         $metrics = $this->repository->getMetrics($jobClass, $connection, $queue);
 
-        return new JobMetricsData(
+        $metricsData = new JobMetricsData(
             jobClass: $jobClass,
             connection: $connection,
             queue: $queue,
@@ -44,10 +46,15 @@ final readonly class CalculateJobMetricsAction
             windowStats: $this->calculateWindows($jobClass, $connection, $queue),
             calculatedAt: Carbon::now(),
         );
+
+        // Dispatch event for real-time monitoring
+        MetricsRecorded::dispatch($metricsData);
+
+        return $metricsData;
     }
 
     /**
-     * @param array<string, mixed> $metrics
+     * @param  array<string, mixed>  $metrics
      */
     private function calculateExecution(array $metrics): JobExecutionData
     {
@@ -55,7 +62,7 @@ final readonly class CalculateJobMetricsAction
     }
 
     /**
-     * @param array<string, mixed> $metrics
+     * @param  array<string, mixed>  $metrics
      */
     private function calculateDuration(
         string $jobClass,
@@ -108,9 +115,9 @@ final readonly class CalculateJobMetricsAction
         string $connection,
         string $queue,
     ): ThroughputStats {
-        $perMinute = $this->repository->getThroughput($jobClass, $connection, $queue, 60);
-        $perHour = $this->repository->getThroughput($jobClass, $connection, $queue, 3600);
-        $perDay = $this->repository->getThroughput($jobClass, $connection, $queue, 86400);
+        $perMinute = $this->repository->getThroughput($jobClass, $connection, $queue, MetricsConstants::SECONDS_PER_MINUTE);
+        $perHour = $this->repository->getThroughput($jobClass, $connection, $queue, MetricsConstants::SECONDS_PER_HOUR);
+        $perDay = $this->repository->getThroughput($jobClass, $connection, $queue, MetricsConstants::SECONDS_PER_DAY);
 
         return new ThroughputStats(
             perMinute: (float) $perMinute,
@@ -120,7 +127,7 @@ final readonly class CalculateJobMetricsAction
     }
 
     /**
-     * @param array<string, mixed> $metrics
+     * @param  array<string, mixed>  $metrics
      */
     private function calculateFailures(array $metrics): FailureInfo
     {
@@ -159,7 +166,7 @@ final readonly class CalculateJobMetricsAction
                 windowSeconds: $windowSeconds,
                 jobsProcessed: $jobsProcessed,
                 avgDuration: 0.0, // Would need more complex calculation
-                throughput: $windowSeconds > 0 ? $jobsProcessed / ($windowSeconds / 60) : 0.0,
+                throughput: $windowSeconds > 0 ? $jobsProcessed / ($windowSeconds / MetricsConstants::SECONDS_PER_MINUTE) : 0.0,
             );
         }
 

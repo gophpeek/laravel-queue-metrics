@@ -5,10 +5,12 @@ declare(strict_types=1);
 use Carbon\Carbon;
 use PHPeek\LaravelQueueMetrics\Actions\RecordJobStartAction;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
 
 beforeEach(function () {
     $this->repository = Mockery::mock(JobMetricsRepository::class);
-    $this->action = new RecordJobStartAction($this->repository);
+    $this->queueRepository = Mockery::mock(QueueMetricsRepository::class);
+    $this->action = new RecordJobStartAction($this->repository, $this->queueRepository);
 
     Carbon::setTestNow('2024-01-15 10:30:00');
     config(['queue-metrics.enabled' => true]);
@@ -20,6 +22,10 @@ afterEach(function () {
 });
 
 it('records job start with all parameters', function () {
+    $this->queueRepository->shouldReceive('markQueueDiscovered')
+        ->once()
+        ->with('redis', 'default');
+
     $this->repository->shouldReceive('recordStart')
         ->once()
         ->with(
@@ -52,6 +58,10 @@ it('does nothing when metrics are disabled', function () {
 });
 
 it('handles different queue connections', function () {
+    $this->queueRepository->shouldReceive('markQueueDiscovered')
+        ->once()
+        ->with('database', 'emails');
+
     $this->repository->shouldReceive('recordStart')
         ->once()
         ->with(
@@ -73,6 +83,10 @@ it('handles different queue connections', function () {
 it('records start time at execution moment', function () {
     Carbon::setTestNow('2024-01-15 14:45:30');
 
+    $this->queueRepository->shouldReceive('markQueueDiscovered')
+        ->once()
+        ->with('redis', 'reports');
+
     $this->repository->shouldReceive('recordStart')
         ->once()
         ->with(
@@ -92,6 +106,10 @@ it('records start time at execution moment', function () {
 });
 
 it('handles job IDs with special characters', function () {
+    $this->queueRepository->shouldReceive('markQueueDiscovered')
+        ->once()
+        ->with('redis', 'default');
+
     $this->repository->shouldReceive('recordStart')
         ->once()
         ->with(
