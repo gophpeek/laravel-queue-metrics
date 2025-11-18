@@ -87,12 +87,8 @@ Route::prefix('queue-metrics')
 
         // Prometheus export
         if (config('queue-metrics.prometheus.enabled', true)) {
-            $route = Route::get('/prometheus', PrometheusController::class)
+            Route::get('/prometheus', PrometheusController::class)
+                ->middleware(config('queue-metrics.prometheus.middleware', []))
                 ->name('queue-metrics.prometheus');
-
-            // Apply optional rate limiting if enabled
-            if (config('queue-metrics.prometheus.rate_limit.enabled', false)) {
-                $route->middleware(ThrottlePrometheus::class);
-            }
         }
     });

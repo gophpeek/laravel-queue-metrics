@@ -13,20 +13,15 @@ use Symfony\Component\HttpFoundation\Response;
  * Optional rate limiting middleware for Prometheus endpoint.
  *
  * Prevents abuse by limiting requests per IP address.
- * Enable in config: 'prometheus.rate_limit.enabled' => true
+ * Enable by adding this middleware to config: 'prometheus.middleware' => [ThrottlePrometheus::class]
  */
 final readonly class ThrottlePrometheus
 {
     /**
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, int $maxAttempts = 60, int $decayMinutes = 1): Response
     {
-        $maxAttemptsConfig = config('queue-metrics.prometheus.rate_limit.max_attempts', 60);
-        $maxAttempts = is_numeric($maxAttemptsConfig) ? (int) $maxAttemptsConfig : 60;
-
-        $decayMinutesConfig = config('queue-metrics.prometheus.rate_limit.decay_minutes', 1);
-        $decayMinutes = is_numeric($decayMinutesConfig) ? (int) $decayMinutesConfig : 1;
 
         $key = 'prometheus:' . $request->ip();
 
