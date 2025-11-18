@@ -22,6 +22,7 @@ use PHPeek\LaravelQueueMetrics\Repositories\RedisJobMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisQueueMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisWorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\RedisWorkerRepository;
+use PHPeek\LaravelQueueMetrics\Actions\CalculateBaselinesAction;
 
 // config for PHPeek/LaravelQueueMetrics
 return [
@@ -135,7 +136,6 @@ return [
 
     'worker_heartbeat' => [
         'stale_threshold' => env('QUEUE_METRICS_STALE_THRESHOLD', 60),
-        'auto_detect_schedule' => env('QUEUE_METRICS_AUTO_DETECT_SCHEDULE', '* * * * *'),
     ],
 
     'baseline' => [
@@ -168,7 +168,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | 🛠️ SPATIE-STYLE EXTENSIBILITY
+    | 🛠️ EXTENSIBILITY
     |--------------------------------------------------------------------------
     |
     | Override repositories and actions to customize package behavior.
@@ -203,7 +203,7 @@ return [
         'transition_worker_state' => TransitionWorkerStateAction::class,
         'record_queue_depth_history' => RecordQueueDepthHistoryAction::class,
         'record_throughput_history' => RecordThroughputHistoryAction::class,
-        'calculate_baselines' => \PHPeek\LaravelQueueMetrics\Actions\CalculateBaselinesAction::class,
+        'calculate_baselines' => CalculateBaselinesAction::class,
     ],
 
 ];

@@ -7,7 +7,7 @@ namespace PHPeek\LaravelQueueMetrics\Support;
 use PHPeek\LaravelQueueMetrics\Contracts\MetricsHook;
 
 /**
- * Manages and executes metrics processing hooks.
+ * Manages and executes metrics processing hooks using Pipeline pattern.
  * Provides extensibility points for custom metrics processing.
  */
 final class HookManager
@@ -16,6 +16,10 @@ final class HookManager
      * @var array<string, array<MetricsHook>>
      */
     private array $hooks = [];
+
+    public function __construct(
+        private HookPipeline $pipeline,
+    ) {}
 
     /**
      * Register a hook for a specific context.
@@ -28,29 +32,40 @@ final class HookManager
 
         $this->hooks[$context][] = $hook;
 
-        // Sort by priority
+        // Sort by priority (lower priority = runs first)
         usort($this->hooks[$context], fn ($a, $b) => $a->priority() <=> $b->priority());
     }
 
     /**
-     * Execute all hooks for a given context.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
+     * Execute all hooks for a given context using Pipeline.
+     * Follows Statamic's Hookable pattern for cleaner implementation.
      */
-    public function execute(string $context, array $data): array
+    public function execute(string $context, mixed $payload, ?object $bindTo = null): mixed
+    {
+        $hooks = $this->getEligibleHooks($context);
+
+        if (empty($hooks)) {
+            return $payload;
+        }
+
+        return $this->pipeline->run($hooks, $payload, $bindTo);
+    }
+
+    /**
+     * Get all registered hooks for a context that should run.
+     *
+     * @return array<MetricsHook>
+     */
+    public function getEligibleHooks(string $context): array
     {
         if (! isset($this->hooks[$context])) {
-            return $data;
+            return [];
         }
 
-        foreach ($this->hooks[$context] as $hook) {
-            if ($hook->shouldRun($context)) {
-                $data = $hook->handle($data);
-            }
-        }
-
-        return $data;
+        return array_filter(
+            $this->hooks[$context],
+            fn (MetricsHook $hook) => $hook->shouldRun($context)
+        );
     }
 
     /**

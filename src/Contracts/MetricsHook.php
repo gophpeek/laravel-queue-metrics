@@ -7,19 +7,19 @@ namespace PHPeek\LaravelQueueMetrics\Contracts;
 /**
  * Hook interface for extending metrics processing pipeline.
  * Allows users to inject custom logic at key points in metrics collection.
+ *
+ * Hooks are executed through Laravel's Pipeline for clean composition.
  */
 interface MetricsHook
 {
     /**
-     * Execute hook logic.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed> Modified data
+     * Process the payload through the hook.
+     * Can accept and return any type of payload (arrays, DTOs, etc.).
      */
-    public function handle(array $data): array;
+    public function handle(mixed $payload): mixed;
 
     /**
-     * Determine if this hook should run.
+     * Determine if this hook should run in the given context.
      */
     public function shouldRun(string $context): bool;
 

@@ -55,6 +55,9 @@ use PHPeek\LaravelQueueMetrics\Services\QueueMetricsQueryService;
 use PHPeek\LaravelQueueMetrics\Services\RedisKeyScannerService;
 use PHPeek\LaravelQueueMetrics\Services\ServerMetricsService;
 use PHPeek\LaravelQueueMetrics\Services\WorkerMetricsQueryService;
+use PHPeek\LaravelQueueMetrics\Contracts\MetricsHook;
+use PHPeek\LaravelQueueMetrics\Support\HookManager;
+use PHPeek\LaravelQueueMetrics\Support\HookPipeline;
 use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 use PHPeek\LaravelQueueMetrics\Utilities\PercentileCalculator;
 use Spatie\LaravelPackageTools\Package;
@@ -112,6 +115,10 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
 
         // Register utilities
         $this->app->singleton(PercentileCalculator::class);
+
+        // Register hook system
+        $this->app->singleton(HookPipeline::class);
+        $this->app->singleton(HookManager::class);
     }
 
     /**
@@ -180,6 +187,33 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
 
         // Register scheduled tasks
         $this->registerScheduledTasks();
+
+        // Load and register hooks from configuration
+        $this->loadHooksFromConfig();
+    }
+
+    /**
+     * Load hooks from configuration and register them.
+     */
+    protected function loadHooksFromConfig(): void
+    {
+        /** @var HookManager $hookManager */
+        $hookManager = $this->app->make(HookManager::class);
+
+        /** @var array<string, array<class-string<MetricsHook>>> $configHooks */
+        $configHooks = config('queue-metrics.hooks', []);
+
+        foreach ($configHooks as $context => $hookClasses) {
+            foreach ($hookClasses as $hookClass) {
+                if (! class_exists($hookClass)) {
+                    continue;
+                }
+
+                /** @var MetricsHook $hook */
+                $hook = $this->app->make($hookClass);
+                $hookManager->register($context, $hook);
+            }
+        }
     }
 
     /**
@@ -187,18 +221,16 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
      */
     protected function registerScheduledTasks(): void
     {
-        /** @var string $schedule */
-        $schedule = config('queue-metrics.worker_heartbeat.auto_detect_schedule', '* * * * *');
         /** @var int $threshold */
         $threshold = config('queue-metrics.worker_heartbeat.stale_threshold', 60);
 
         // Schedule stale worker cleanup
-        $this->app->booted(function () use ($schedule, $threshold) {
+        $this->app->booted(function () use ($threshold) {
             $scheduler = $this->app->make(\Illuminate\Console\Scheduling\Schedule::class);
 
             $scheduler->command('queue-metrics:cleanup-stale-workers', [
                 '--threshold' => $threshold,
-            ])->cron($schedule);
+            ])->everyMinute();
 
             // Schedule adaptive baseline calculation
             $this->scheduleAdaptiveBaselineCalculation($scheduler);
