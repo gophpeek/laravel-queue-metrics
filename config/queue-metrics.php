@@ -10,8 +10,6 @@ use PHPeek\LaravelQueueMetrics\Actions\RecordQueueDepthHistoryAction;
 use PHPeek\LaravelQueueMetrics\Actions\RecordThroughputHistoryAction;
 use PHPeek\LaravelQueueMetrics\Actions\RecordWorkerHeartbeatAction;
 use PHPeek\LaravelQueueMetrics\Actions\TransitionWorkerStateAction;
-use PHPeek\LaravelQueueMetrics\Http\Middleware\AllowIps;
-use PHPeek\LaravelQueueMetrics\Http\Middleware\ThrottlePrometheus;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\BaselineRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
