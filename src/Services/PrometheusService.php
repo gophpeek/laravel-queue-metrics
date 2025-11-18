@@ -42,7 +42,7 @@ final readonly class PrometheusService
         $overview = Cache::remember(
             'queue_metrics:prometheus:overview',
             now()->addSeconds($cacheTtl),
-            fn () => $this->metricsQuery->getOverview()
+            fn () => $this->metricsQuery->getOverview(false)
         );
 
         // Export all metric categories
