@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PHPeek\LaravelQueueMetrics\Services;
 
+use PHPeek\SystemMetrics\SystemMetrics;
+
 /**
  * Service for collecting server-wide resource metrics.
  */
@@ -12,17 +14,60 @@ final readonly class ServerMetricsService
     /**
      * Get current server resource metrics.
      *
-     * Note: SystemMetrics package disabled due to macOS compatibility issues.
-     * For production Linux environments, consider re-enabling with proper error handling.
-     *
      * @return array<string, mixed>
      */
     public function getCurrentMetrics(): array
     {
-        return [
-            'available' => false,
-            'error' => 'Server metrics temporarily disabled (SystemMetrics compatibility issue on development environment)',
-        ];
+        try {
+            $result = SystemMetrics::overview();
+
+            if (! $result->isSuccess()) {
+                $error = $result->getError();
+
+                return [
+                    'available' => false,
+                    'error' => 'Failed to collect system metrics: '.($error?->getMessage() ?? 'Unknown error'),
+                ];
+            }
+
+            $overview = $result->getValue();
+
+            // CPU metrics (raw counters, calculate usage percentage)
+            $cpuTotal = $overview->cpu->total;
+            $busyTime = $cpuTotal->busy();
+            $totalTime = $cpuTotal->total();
+            $cpuUsagePercent = $totalTime > 0 ? ($busyTime / $totalTime) * 100 : 0;
+
+            // Memory metrics (bytes to MB)
+            $memoryUsageMb = $overview->memory->usedBytes / (1024 * 1024);
+            $memoryTotalMb = $overview->memory->totalBytes / (1024 * 1024);
+            $memoryUsagePercent = $overview->memory->usedPercentage();
+
+            return [
+                'available' => true,
+                'cpu' => [
+                    'usage_percent' => round($cpuUsagePercent, 2),
+                    'count' => $overview->cpu->coreCount(),
+                    'load_average' => [
+                        '1min' => 0.0, // Not available in v1.0
+                        '5min' => 0.0,
+                        '15min' => 0.0,
+                    ],
+                ],
+                'memory' => [
+                    'usage_percent' => round($memoryUsagePercent, 2),
+                    'total_mb' => round($memoryTotalMb, 2),
+                    'used_mb' => round($memoryUsageMb, 2),
+                    'available_mb' => round($memoryTotalMb - $memoryUsageMb, 2),
+                ],
+                'disk' => [], // Disk metrics not available in v1.0 overview
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'available' => false,
+                'error' => 'Exception collecting system metrics: '.$e->getMessage(),
+            ];
+        }
     }
 
     /**
