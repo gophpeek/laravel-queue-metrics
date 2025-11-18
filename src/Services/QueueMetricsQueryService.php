@@ -10,6 +10,7 @@ use PHPeek\LaravelQueueMetrics\DataTransferObjects\QueueDepthData;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\QueueMetricsData;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\BaselineRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 
 /**
@@ -23,6 +24,7 @@ final readonly class QueueMetricsQueryService
         private QueueInspector $queueInspector,
         private RedisMetricsStore $redisStore,
         private RedisKeyScannerService $keyScanner,
+        private WorkerHeartbeatRepository $workerHeartbeatRepository,
     ) {}
 
     /**
@@ -118,6 +120,11 @@ final readonly class QueueMetricsQueryService
                 $metrics = $this->getQueueMetrics($connection, $queue);
                 $baseline = $this->getBaseline($connection, $queue);
 
+                // Count active workers for this specific queue
+                $activeWorkers = $this->workerHeartbeatRepository
+                    ->getActiveWorkers($connection, $queue)
+                    ->count();
+
                 $queues[$queueKey] = [
                     'connection' => $connection,
                     'queue' => $queue,
@@ -132,7 +139,7 @@ final readonly class QueueMetricsQueryService
                     'avg_duration_ms' => $metrics->avgDuration,
                     'failure_rate' => $metrics->failureRate,
                     'utilization_rate' => 0, // Note: Utilization rate calculation requires worker time tracking
-                    'active_workers' => 0, // Note: Worker count per queue requires worker-queue mapping
+                    'active_workers' => $activeWorkers,
                     'baseline' => $baseline ? $baseline->toArray() : null,
                     'timestamp' => now()->toIso8601String(),
                 ];
