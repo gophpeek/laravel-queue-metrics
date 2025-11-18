@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerHeartbeat;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerStatsData;
 use PHPeek\LaravelQueueMetrics\Enums\WorkerState;
+use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerHeartbeatRepository;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\WorkerRepository;
 
@@ -19,6 +20,7 @@ final readonly class WorkerMetricsQueryService
     public function __construct(
         private WorkerRepository $workerRepository,
         private WorkerHeartbeatRepository $workerHeartbeatRepository,
+        private JobMetricsRepository $jobMetricsRepository,
     ) {}
 
     /**
@@ -245,6 +247,27 @@ final readonly class WorkerMetricsQueryService
                 $totalUptimeMinutes = $totalUptimeSeconds / 60;
                 $server['performance']['jobs_per_minute'] = $totalUptimeMinutes > 0
                     ? round($server['performance']['total_jobs_processed'] / $totalUptimeMinutes, 2)
+                    : 0.0;
+
+                // Get hostname-scoped job metrics for detailed job performance
+                $jobMetrics = $this->jobMetricsRepository->getHostnameJobMetrics($hostname);
+                $totalJobsFailed = 0;
+                $totalDurationMs = 0.0;
+                $totalJobsProcessed = 0;
+
+                foreach ($jobMetrics as $metrics) {
+                    $totalJobsFailed += $metrics['total_failed'];
+                    $totalDurationMs += $metrics['total_duration_ms'];
+                    $totalJobsProcessed += $metrics['total_processed'];
+                }
+
+                $server['performance']['total_jobs_failed'] = $totalJobsFailed;
+                $totalJobs = $totalJobsProcessed + $totalJobsFailed;
+                $server['performance']['failure_rate'] = $totalJobs > 0
+                    ? round(($totalJobsFailed / $totalJobs) * 100, 2)
+                    : 0.0;
+                $server['performance']['avg_job_duration_ms'] = $totalJobsProcessed > 0
+                    ? round($totalDurationMs / $totalJobsProcessed, 2)
                     : 0.0;
 
                 // Add capacity recommendation
