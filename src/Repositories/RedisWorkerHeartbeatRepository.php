@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PHPeek\LaravelQueueMetrics\Repositories;
 
 use Carbon\Carbon;
+use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Collection;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\WorkerHeartbeat;
 use PHPeek\LaravelQueueMetrics\Enums\WorkerState;
@@ -41,7 +42,11 @@ final readonly class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRe
         $now = Carbon::now();
         $ttl = $this->redis->getTtl('raw');
 
+        // Get Laravel Redis connection
+        $laravelConnection = $this->redis->connection();
+
         // Prepare script arguments
+        // Laravel's Redis connection auto-prefixes keys for both eval() and evalsha()
         $keys = [$workerKey, $indexKey];
         $args = [
             $workerId, // ARGV[1]
@@ -59,7 +64,7 @@ final readonly class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRe
         ];
 
         // Execute Lua script with SHA caching for performance
-        $this->executeScriptWithCache($driver, $keys, $args);
+        $this->executeScriptWithCache($laravelConnection, $keys, $args);
     }
 
     public function transitionState(
@@ -224,63 +229,20 @@ final readonly class RedisWorkerHeartbeatRepository implements WorkerHeartbeatRe
      *
      * @throws LuaScriptException
      */
-    private function executeScriptWithCache(RedisMetricsStore $driver, array $keys, array $args): void
+    private function executeScriptWithCache(Connection $connection, array $keys, array $args): void
     {
         $scriptPath = __DIR__.'/../Support/LuaScripts/UpdateWorkerHeartbeat.lua';
-        $scriptSha = LuaScriptCache::get($scriptPath);
 
-        // Get actual Laravel Redis connection
-        $connection = $driver->connection();
+        $luaScript = file_get_contents($scriptPath);
 
-        // If SHA not cached, load script and cache SHA
-        if ($scriptSha === null) {
-            $luaScript = file_get_contents($scriptPath);
-
-            if ($luaScript === false) {
-                throw LuaScriptException::failedToLoad($scriptPath);
-            }
-
-            // Load script into Redis and get SHA
-            // SCRIPT LOAD returns the SHA1 digest as a string
-            $loadedSha = $connection->command('SCRIPT', ['LOAD', $luaScript]);
-
-            if (! is_string($loadedSha)) {
-                throw LuaScriptException::invalidSha($scriptPath);
-            }
-
-            $scriptSha = $loadedSha;
-            LuaScriptCache::set($scriptPath, $scriptSha);
+        if ($luaScript === false) {
+            throw LuaScriptException::failedToLoad($scriptPath);
         }
 
-        try {
-            // Try EVALSHA with cached SHA (fast path)
-            // Laravel's PhpRedisConnection uses variadic signature (variadic params)
-            // while PHPStan sees native Redis (array params) - both work correctly at runtime
-            /** @phpstan-ignore-next-line argument.type */
-            $connection->evalsha($scriptSha, count($keys), ...$keys, ...$args);
-        } catch (\Exception $e) {
-            // Script not in Redis cache (evicted or Redis restart)
-            // Fall back to EVAL and reload script
-            $luaScript = file_get_contents($scriptPath);
-
-            if ($luaScript === false) {
-                throw LuaScriptException::failedToLoad($scriptPath);
-            }
-
-            // Execute with EVAL and reload SHA for next time
-            // Laravel's PhpRedisConnection uses variadic signature (variadic params)
-            // while PHPStan sees native Redis (array params) - both work correctly at runtime
-            /** @phpstan-ignore-next-line argument.type */
-            $connection->eval($luaScript, count($keys), ...$keys, ...$args);
-
-            // Reload SHA for future calls
-            $reloadedSha = $connection->command('SCRIPT', ['LOAD', $luaScript]);
-
-            if (! is_string($reloadedSha)) {
-                throw LuaScriptException::invalidSha($scriptPath);
-            }
-
-            LuaScriptCache::set($scriptPath, $reloadedSha);
-        }
+        // IMPORTANT: Laravel's evalsha() does NOT work correctly with automatic key prefixing
+        // It returns false instead of executing the script properly
+        // We must use eval() which correctly handles prefixing
+        /** @phpstan-ignore-next-line argument.type */
+        $connection->eval($luaScript, count($keys), ...array_merge($keys, $args));
     }
 }
