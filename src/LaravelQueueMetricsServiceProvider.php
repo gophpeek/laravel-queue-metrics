@@ -27,7 +27,6 @@ use PHPeek\LaravelQueueMetrics\Config\StorageConfig;
 use PHPeek\LaravelQueueMetrics\Console\Commands\MigrateToDiscoverySetsCommand;
 use PHPeek\LaravelQueueMetrics\Console\DetectStaleWorkersCommand;
 use PHPeek\LaravelQueueMetrics\Console\RecordTrendDataCommand;
-use PHPeek\LaravelQueueMetrics\Contracts\MetricsHook;
 use PHPeek\LaravelQueueMetrics\Contracts\QueueInspector;
 use PHPeek\LaravelQueueMetrics\Exceptions\ConfigurationException;
 use PHPeek\LaravelQueueMetrics\Listeners\JobExceptionOccurredListener;
