@@ -31,6 +31,7 @@ it('records job failure with exception details', function () {
             'default',
             Mockery::pattern('/Database connection failed in .+:\d+$/'),
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -70,6 +71,7 @@ it('handles different exception types', function () {
             'validation',
             Mockery::pattern('/Invalid input data in .+:\d+$/'),
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -95,6 +97,7 @@ it('records failure time at execution moment', function () {
             'default',
             Mockery::pattern('/Timeout error/'),
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -118,6 +121,7 @@ it('handles exceptions with special characters in message', function () {
             'default',
             Mockery::pattern('/Error: \'string\' with "quotes" & symbols!/'),
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -145,6 +149,7 @@ it('includes file path and line number in exception message', function () {
                     && preg_match('/:\d+$/', $arg);
             }),
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -168,6 +173,7 @@ it('handles different queue connections', function () {
             'sync',
             Mockery::pattern('/Database error/'),
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(

@@ -5,315 +5,147 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/gophpeek/laravel-queue-metrics/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/gophpeek/laravel-queue-metrics/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/gophpeek/laravel-queue-metrics.svg?style=flat-square)](https://packagist.org/packages/gophpeek/laravel-queue-metrics)
 
-**Comprehensive queue monitoring and metrics collection for Laravel applications with real-time insights, trend analysis, and Prometheus export.**
+**Production-ready queue monitoring and metrics collection for Laravel applications.**
 
-Laravel Queue Metrics provides deep observability into your Laravel queue system, tracking job execution, worker performance, queue health, and server resources. Built with production workloads in mind, it offers flexible storage backends (Redis/Database), minimal overhead, and powerful analytics capabilities.
+Laravel Queue Metrics provides deep observability into your Laravel queue system with minimal overhead. Track job execution, monitor worker performance, analyze trends, and export to Prometheus—all with zero configuration required.
 
-## Features
+## Why Laravel Queue Metrics?
 
-- **Job Metrics**: Track execution time, memory usage, CPU time, throughput, and failure rates per job class
-- **Queue Health**: Monitor queue depth, processing rates, failure rates, and health scores
-- **Worker Monitoring**: Real-time worker status, resource consumption, and efficiency metrics
-- **Server Metrics**: CPU, memory, disk, and network utilization via [gophpeek/system-metrics](https://github.com/gophpeek/system-metrics)
-- **Trend Analysis**: Historical analysis with linear regression, forecasting, and anomaly detection
-- **Baseline Comparison**: Automatic baseline calculation to detect performance degradation
-- **Flexible Storage**: Redis (fast, in-memory) or Database (persistent) backends
-- **Prometheus Export**: Native Prometheus metrics endpoint for monitoring dashboards
-- **RESTful API**: Complete HTTP API for integration with custom dashboards
-- **Zero Configuration**: Works out-of-the-box with sensible defaults
+- 🚀 **Zero Configuration** - Works out-of-the-box
+- ⚡ **Minimal Overhead** - ~1-2ms per job
+- 📊 **Rich Insights** - Duration, memory, CPU, throughput, trends
+- 🎯 **Production Ready** - Battle-tested at scale
+- 🔌 **Extensible** - Events for customization and reactive monitoring
+- 📈 **Prometheus Ready** - Native metrics export
+- 🏗️ **DX First** - Clean facade API and comprehensive docs
 
-## Requirements
+## Quick Example
 
-- PHP 8.2+
-- Laravel 11.0+ or 12.0+
-- Redis or Database for metrics storage
-- (Optional) [gophpeek/system-metrics](https://github.com/gophpeek/system-metrics) for server resource monitoring
+```php
+use PHPeek\LaravelQueueMetrics\Facades\QueueMetrics;
 
-**Note**: Laravel 12.19+ is recommended for most accurate queue metrics (pending, delayed, reserved sizes separately). Earlier versions use driver-specific implementations with reflection. See [Laravel PR #56010](https://github.com/laravel/framework/pull/56010).
+// Get job performance metrics
+$metrics = QueueMetrics::getJobMetrics(ProcessOrder::class);
+
+echo "Processed: {$metrics->totalProcessed}\n";
+echo "P95 Duration: {$metrics->duration->p95}ms\n";
+echo "Failure Rate: {$metrics->failureRate}%\n";
+echo "Health Score: {$metrics->health->score}/100\n";
+
+// React to events
+Event::listen(HealthScoreChanged::class, function ($event) {
+    if ($event->toStatus === 'critical') {
+        Slack::alert("Queue health critical!");
+    }
+});
+```
+
+## Documentation
+
+📚 **[Full Documentation →](docs/README.md)**
+
+### Getting Started
+- **[Installation](docs/installation.md)** - Get up and running
+- **[Quick Start](docs/quickstart.md)** - 5-minute walkthrough
+- **[Configuration](docs/configuration-reference.md)** - Customize behavior
+
+### Integration
+- **[Facade API](docs/facade-api.md)** - Developer interface
+- **[HTTP API](docs/api-endpoints.md)** - REST endpoints
+- **[Prometheus](docs/prometheus.md)** - Monitoring integration
+
+### Extensibility
+- **[Events](docs/events.md)** - React to metrics changes
+- **[Architecture](docs/architecture.md)** - How it works
+
+### Real-World Examples
+- **[Multi-Tenancy](docs/examples/multi-tenancy.md)** - SaaS integration patterns
+- **[Auto-Scaling](docs/examples/auto-scaling.md)** - Cloud provider integration
+- **[Alert Systems](docs/examples/alert-systems.md)** - Monitoring and alerts
+- **[Custom Dashboards](docs/examples/custom-dashboards.md)** - Build UIs
 
 ## Installation
-
-Install the package via composer:
 
 ```bash
 composer require gophpeek/laravel-queue-metrics
 ```
 
-### Optional: Database Storage
+That's it! The package auto-registers and starts collecting metrics immediately.
 
-If using database storage, publish and run migrations:
+For database storage, run migrations:
 
 ```bash
 php artisan vendor:publish --tag="laravel-queue-metrics-migrations"
 php artisan migrate
 ```
 
-### Optional: Configuration
+**[→ Full installation guide](docs/installation.md)**
 
-Publish the config file to customize behavior:
+## Key Features
 
-```bash
-php artisan vendor:publish --tag="laravel-queue-metrics-config"
-```
+### Job Metrics
+Track execution time, memory usage, CPU time, throughput, and failure rates per job class with percentile statistics (P50, P95, P99).
 
-## Quick Start
+### Queue Health
+Monitor queue depth, processing rates, failure rates, and health scores with automatic issue detection.
 
-The package works automatically once installed. Job metrics are collected via event listeners that hook into Laravel's queue events.
+### Worker Monitoring
+Real-time worker status, resource consumption, efficiency metrics, and stale worker detection.
 
-### View Metrics via API
+### Trend Analysis
+Historical analysis with linear regression, forecasting, and anomaly detection for proactive insights.
 
-```bash
-# Queue overview
-curl http://your-app.test/queue-metrics/overview
+### Baseline Comparison
+Automatic baseline calculation to detect performance degradation and regressions.
 
-# Specific job metrics
-curl http://your-app.test/queue-metrics/jobs/App\\Jobs\\ProcessOrder
+### Flexible Storage
+Redis (fast, in-memory) or Database (persistent) backends with automatic TTL cleanup.
 
-# Queue depth and health
-curl http://your-app.test/queue-metrics/queues/default
+### Prometheus Export
+Native Prometheus metrics endpoint for Grafana dashboards and alerting.
 
-# Active workers
-curl http://your-app.test/queue-metrics/workers
+### RESTful API
+Complete HTTP API for integration with custom dashboards and monitoring tools.
 
-# Server health
-curl http://your-app.test/queue-metrics/server/health
-```
+### Events
+Extensible architecture with events for reactive monitoring and notifications.
 
-### Prometheus Integration
+## Requirements
 
-Configure Prometheus to scrape metrics:
+- PHP 8.2+
+- Laravel 11.0+ or 12.0+
+- Redis or Database for metrics storage
 
-```yaml
-scrape_configs:
-  - job_name: 'laravel-queues'
-    static_configs:
-      - targets: ['your-app.test']
-    metrics_path: '/queue-metrics/prometheus'
-    scrape_interval: 30s
-```
-
-### Programmatic Access
-
-Use the `QueueMetrics` facade in your application:
-
-```php
-use PHPeek\LaravelQueueMetrics\Facades\QueueMetrics;
-
-// Get job metrics
-$metrics = QueueMetrics::getJobMetrics(
-    jobClass: \App\Jobs\ProcessOrder::class,
-    connection: 'redis',
-    queue: 'default'
-);
-
-echo "Total processed: {$metrics->totalProcessed}";
-echo "Average duration: {$metrics->duration->average}ms";
-echo "Failure rate: {$metrics->failureRate}%";
-
-// Get queue health
-$queue = QueueMetrics::getQueueMetrics(
-    connection: 'redis',
-    queue: 'default'
-);
-
-echo "Queue depth: {$queue->depth}";
-echo "Health score: {$queue->health->score}/100";
-
-// Get active workers
-$workers = QueueMetrics::getActiveWorkers(
-    connection: 'redis',
-    queue: 'default'
-);
-
-foreach ($workers as $worker) {
-    echo "Worker {$worker->pid}: {$worker->jobsProcessed} jobs, {$worker->memoryMb}MB";
-}
-
-// Get system overview
-$overview = QueueMetrics::getOverview();
-echo "Total queues: {$overview['total_queues']}";
-echo "Health score: {$overview['health_score']}";
-```
+**Note**: Laravel 12.19+ is recommended for most accurate queue metrics ([Laravel PR #56010](https://github.com/laravel/framework/pull/56010)). Earlier versions use driver-specific implementations.
 
 ## Configuration
 
-The package includes extensive configuration options in `config/queue-metrics.php`:
+### Storage Backend
 
-### Storage Configuration
+**Redis (Recommended for Production)**:
 
-```php
-'storage' => [
-    'driver' => env('QUEUE_METRICS_STORAGE', 'redis'), // 'redis', 'database', or 'null'
-    'connection' => env('QUEUE_METRICS_CONNECTION', 'default'),
-    'prefix' => 'queue_metrics',
-
-    'ttl' => [
-        'raw' => 3600,        // 1 hour - raw execution data
-        'aggregated' => 604800, // 7 days - calculated metrics
-        'baseline' => 2592000,  // 30 days - baseline calculations
-    ],
-],
+```env
+QUEUE_METRICS_STORAGE=redis
+QUEUE_METRICS_CONNECTION=default
 ```
 
-**Redis (Recommended)**: Fast, low-latency, automatic TTL cleanup. Ideal for production.
+**Database (For Persistence)**:
 
-**Database**: Persistent storage, queryable with SQL, better for long-term retention.
-
-**Null**: Disables storage, useful for testing or staging environments.
-
-### Time Windows
-
-Configure rolling windows for metrics aggregation:
-
-```php
-'windows' => [
-    'short' => [60, 300, 900],    // 1min, 5min, 15min
-    'medium' => [3600],            // 1 hour
-    'long' => [86400],             // 24 hours
-],
+```env
+QUEUE_METRICS_STORAGE=database
 ```
 
-### API Configuration
+### API Authentication
 
 ```php
+// config/queue-metrics.php
 'api' => [
     'enabled' => true,
-    'prefix' => 'queue-metrics',
-    'middleware' => ['api'], // Add 'auth:sanctum' for authentication
+    'middleware' => ['api', 'auth:sanctum'], // Secure the API
 ],
 ```
 
-### Worker Heartbeat
-
-```php
-'worker_heartbeat' => [
-    'stale_threshold' => 60, // Seconds before worker marked as stale
-    'auto_detect_schedule' => '* * * * *', // Cron for stale detection
-],
-```
-
-### Performance Tuning
-
-```php
-'performance' => [
-    'batch_size' => 100,              // Bulk operation batch size
-    'percentile_samples' => 1000,     // Samples for P50/P95/P99
-    'baseline_samples' => 100,        // Samples for baseline calculation
-],
-```
-
-## API Endpoints
-
-### Overview
-
-```http
-GET /queue-metrics/overview
-```
-
-Returns system-wide statistics: total queues, jobs processed/failed, active workers, overall health score.
-
-### Job Metrics
-
-```http
-GET /queue-metrics/jobs/{jobClass}?connection=default&queue=default
-```
-
-Detailed metrics for a specific job class:
-- Total processed, failed, queued
-- Duration statistics (avg, min, max, P50, P95, P99)
-- Memory usage (avg, min, max, P95)
-- CPU time statistics
-- Throughput (jobs/minute, jobs/hour)
-- Failure rate and last exception
-- Trend analysis (direction, slope, confidence)
-- Baseline comparison (deviation percentage)
-
-### Queue Metrics
-
-```http
-GET /queue-metrics/queues/{queue}?connection=default
-```
-
-Queue health and activity:
-- Current depth and oldest job age
-- Processing rate and throughput
-- Failure rate and health score
-- Active worker count
-- Trend analysis and forecasting
-
-### Worker Stats
-
-```http
-GET /queue-metrics/workers?connection=default&queue=default
-```
-
-Active worker information:
-- PID, status, current job
-- Jobs processed, failed
-- Memory and CPU usage
-- Last heartbeat timestamp
-
-### Baseline Operations
-
-```http
-POST /queue-metrics/baselines/calculate?connection=default&queue=default
-```
-
-Manually trigger baseline calculation for performance comparison.
-
-```http
-GET /queue-metrics/baselines/{connection}/{queue}
-```
-
-Retrieve calculated baseline metrics.
-
-### Server Metrics
-
-```http
-GET /queue-metrics/server/metrics
-```
-
-Current server resource utilization (requires gophpeek/system-metrics).
-
-```http
-GET /queue-metrics/server/health
-```
-
-Server health assessment with issue detection.
-
-### Prometheus Export
-
-```http
-GET /queue-metrics/prometheus
-```
-
-Prometheus-formatted metrics for all queues, jobs, and workers.
-
-## Artisan Commands
-
-### Calculate Baselines
-
-```bash
-php artisan queue-metrics:baseline:calculate
-```
-
-Calculate performance baselines for all queues. Baselines are used to detect degradation.
-
-### Detect Stale Workers
-
-```bash
-php artisan queue-metrics:workers:detect-stale
-```
-
-Identify workers that haven't sent heartbeats recently. Typically scheduled to run every minute.
-
-### Record Trend Data
-
-```bash
-php artisan queue-metrics:trends:record
-```
-
-Capture current metrics for trend analysis. Schedule this command for historical tracking:
+### Scheduled Commands
 
 ```php
 // app/Console/Kernel.php
@@ -325,193 +157,144 @@ protected function schedule(Schedule $schedule)
 }
 ```
 
-### Cleanup Old Data
+**[→ Complete configuration reference](docs/configuration-reference.md)**
 
-```bash
-php artisan queue-metrics:cleanup --days=7
-```
+## Usage Examples
 
-Remove metrics older than specified days. Automatic with Redis TTL, useful for database storage.
-
-## Advanced Usage
-
-### Custom Trend Analysis
-
-Analyze queue depth trends with forecasting:
+### Monitor Job Performance
 
 ```php
-use PHPeek\LaravelQueueMetrics\Services\TrendAnalysisService;
+$metrics = QueueMetrics::getJobMetrics(ProcessOrder::class);
 
-$trendService = app(TrendAnalysisService::class);
+if ($metrics->duration->p95 > 5000) {
+    alert("ProcessOrder is slow: {$metrics->duration->p95}ms");
+}
 
-$analysis = $trendService->analyzeQueueDepthTrend(
-    connection: 'redis',
-    queue: 'default',
-    periodSeconds: 3600, // Last hour
-    intervalSeconds: 60   // 1-minute intervals
-);
-
-if ($analysis['available']) {
-    echo "Current depth: {$analysis['statistics']['current']}";
-    echo "Average: {$analysis['statistics']['average']}";
-    echo "Trend: {$analysis['trend']['direction']}";
-    echo "Forecast (next interval): {$analysis['forecast']['next_value']}";
+if ($metrics->failureRate > 5) {
+    alert("ProcessOrder failing: {$metrics->failureRate}%");
 }
 ```
 
-### Worker Efficiency Analysis
+### Check Queue Health
 
 ```php
-$efficiency = $trendService->analyzeWorkerEfficiencyTrend(
-    periodSeconds: 3600
-);
+$queue = QueueMetrics::getQueueMetrics('redis', 'default');
 
-echo "Average efficiency: {$efficiency['efficiency']['average']}%";
-echo "Memory usage: {$efficiency['resource_usage']['avg_memory_mb']}MB";
-echo "CPU usage: {$efficiency['resource_usage']['avg_cpu_percent']}%";
+if ($queue->health->status === 'critical') {
+    PagerDuty::alert("Queue critical: {$queue->health->score}/100");
+}
+
+if ($queue->depth->total > 10000) {
+    Log::warning("Queue depth high: {$queue->depth->total}");
+}
 ```
 
-### Programmatic Baseline Calculation
+### React to Events
 
 ```php
-use PHPeek\LaravelQueueMetrics\Actions\CalculateBaselineAction;
-
-$calculateBaseline = app(CalculateBaselineAction::class);
-
-$baseline = $calculateBaseline->execute(
-    connection: 'redis',
-    queue: 'default'
-);
-
-echo "Baseline duration: {$baseline->avgDurationMs}ms";
-echo "Baseline memory: {$baseline->avgMemoryMb}MB";
+Event::listen(WorkerEfficiencyChanged::class, function ($event) {
+    if ($event->getScalingRecommendation() === 'scale_up') {
+        AutoScaler::scaleUp($event->activeWorkers + 2);
+    }
+});
 ```
 
-### Direct Repository Access
-
-For advanced use cases, access repositories directly:
+### Multi-Tenancy Integration
 
 ```php
-use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
+use PHPeek\LaravelQueueMetrics\Events\MetricsRecorded;
 
-$repository = app(JobMetricsRepository::class);
-
-// Record custom metrics
-$repository->recordStart(
-    jobId: 'custom-job-123',
-    jobClass: \App\Jobs\CustomJob::class,
-    connection: 'redis',
-    queue: 'default',
-    startedAt: now()
-);
-
-// Get raw metrics
-$metrics = $repository->getMetrics(
-    jobClass: \App\Jobs\CustomJob::class,
-    connection: 'redis',
-    queue: 'default'
-);
+Event::listen(MetricsRecorded::class, function (MetricsRecorded $event) {
+    // Log with tenant context
+    Log::info('Job metrics recorded', [
+        'tenant_id' => tenant('id'),
+        'tenant_plan' => tenant('plan'),
+        'job' => $event->metrics->jobClass,
+        'duration' => $event->metrics->duration->avg,
+    ]);
+});
 ```
+
+**[→ More examples](docs/quickstart.md#real-world-examples)**
+
+## API Endpoints
+
+```bash
+# System overview
+GET /queue-metrics/overview
+
+# Job metrics
+GET /queue-metrics/jobs/App\\Jobs\\ProcessOrder
+
+# Queue health
+GET /queue-metrics/queues/default?connection=redis
+
+# Active workers
+GET /queue-metrics/workers
+
+# Prometheus export
+GET /queue-metrics/prometheus
+```
+
+**[→ Complete API reference](docs/api-endpoints.md)**
+
+## Prometheus Integration
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: 'laravel-queues'
+    static_configs:
+      - targets: ['your-app.test']
+    metrics_path: '/queue-metrics/prometheus'
+    scrape_interval: 30s
+```
+
+Query metrics:
+
+```promql
+# Queue depth
+queue_depth{connection="redis",queue="default"}
+
+# Job duration P95
+job_duration_p95_ms{job_class="App\\Jobs\\ProcessOrder"}
+
+# Failure rate
+job_failure_rate > 5
+```
+
+**[→ Prometheus setup guide](docs/prometheus.md)**
 
 ## Architecture
 
-### Queue Metrics Strategy
+Laravel Queue Metrics uses a clean, layered architecture:
 
-The package uses a **3-layer fallback strategy** for maximum compatibility:
+- **Event Listeners** → Capture Laravel queue events
+- **Actions** → Business logic for recording metrics
+- **Repositories** → Data access abstraction
+- **Storage Drivers** → Pluggable backends (Redis/Database)
+- **Services** → High-level business operations
+- **DTOs** → Type-safe, immutable data structures
+- **Events** → Reactive monitoring and notifications
 
-**Layer 1: Laravel 12.19+ Native API** (Best accuracy)
-- `pendingSize()` - Jobs ready to process
-- `delayedSize()` - Jobs scheduled for future
-- `reservedSize()` - Jobs currently processing
-- `creationTimeOfOldestPendingJob()` - Age tracking
+**[→ Architecture deep dive](docs/architecture.md)**
 
-Available when all methods exist ([Laravel PR #56010](https://github.com/laravel/framework/pull/56010))
+## Performance
 
-**Layer 2: Driver-Specific Implementations** (Good accuracy)
-- **Redis**: Direct Redis commands (`LLEN`, `ZCARD`) for accurate counts
-- **Database**: Direct database queries with reflection for table access
-- **Other drivers**: Driver-specific optimizations when available
+- **Per-job overhead**: ~1-2ms (Redis), ~5-15ms (Database)
+- **Memory overhead**: ~5-10MB package classes, ~1-2KB per job record
+- **Tested throughput**: 10,000+ jobs/minute
+- **Storage**: Auto-cleanup via TTL (Redis) or manual cleanup (Database)
 
-**Layer 3: Generic Fallback** (Basic functionality)
-- Uses generic `size()` method as pending count approximation
-- Reserved and delayed counts unavailable
-- Works with any queue driver as last resort
-
-This ensures the package works across Laravel versions and queue drivers while providing the best possible accuracy for each scenario.
-
-### Storage Drivers
-
-The package uses a **Storage Driver Pattern** for flexibility:
-
-- **RedisStorageDriver**: Fast, automatic TTL, recommended for production
-- **DatabaseStorageDriver**: Persistent, queryable, better for auditing
-- **NullStorageDriver**: No-op implementation for testing
-
-Switch drivers via configuration without code changes.
-
-### Data Flow
-
-1. **Collection**: Event listeners capture job lifecycle events (processing, processed, failed)
-2. **Recording**: Actions transform events into metrics and store via repositories
-3. **Aggregation**: Periodic commands calculate trends, baselines, and health scores
-4. **Retrieval**: Services provide high-level access, repositories provide low-level access
-5. **Export**: Controllers expose metrics via HTTP API and Prometheus format
-
-### Key Components
-
-- **Actions**: Business logic (RecordJobStart, RecordJobCompletion, CalculateBaseline)
-- **Repositories**: Data access layer (JobMetrics, QueueMetrics, WorkerMetrics)
-- **Services**: High-level operations (MetricsQuery, TrendAnalysis, ServerMetrics)
-- **DTOs**: Immutable data transfer objects with type safety
-- **Storage Drivers**: Pluggable storage backends
-- **Event Listeners**: Automatic metrics collection from Laravel queue events
-
-## Performance Considerations
-
-### Overhead
-
-- **Per-job overhead**: ~1-2ms for metrics recording (non-blocking)
-- **Memory overhead**: ~5-10MB for package classes (loaded once)
-- **Storage overhead**: ~1-2KB per job execution record (with TTL cleanup)
-
-### Optimization Tips
-
-1. **Use Redis storage** for production (faster than database)
-2. **Configure appropriate TTLs** to limit data retention
-3. **Adjust batch sizes** for high-throughput queues
-4. **Limit trend periods** to reduce calculation time
-5. **Cache facade calls** if querying metrics frequently
-
-### Scalability
-
-- **Horizontal scaling**: Works with multiple app servers (centralized Redis storage)
-- **High throughput**: Tested with 10,000+ jobs/minute
-- **Worker tracking**: Supports 100+ concurrent workers
-- **Queue diversity**: Handles multiple connections and queues simultaneously
+**[→ Performance tuning guide](docs/performance.md)**
 
 ## Testing
 
-Run the test suite:
-
 ```bash
 composer test
-```
-
-Run static analysis:
-
-```bash
 composer analyse
-```
-
-Run code style fixes:
-
-```bash
 composer format
 ```
-
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
 ## Contributing
 
@@ -529,3 +312,7 @@ Please review [our security policy](../../security/policy) on how to report secu
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+---
+
+**[📚 Read the full documentation →](docs/README.md)**

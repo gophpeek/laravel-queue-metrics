@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace PHPeek\LaravelQueueMetrics\Services;
 
+use PHPeek\LaravelQueueMetrics\Actions\CalculateAggregatedJobMetricsAction;
 use PHPeek\LaravelQueueMetrics\Actions\CalculateJobMetricsAction;
+use PHPeek\LaravelQueueMetrics\DataTransferObjects\AggregatedJobMetricsData;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\BaselineData;
 use PHPeek\LaravelQueueMetrics\DataTransferObjects\JobMetricsData;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\BaselineRepository;
@@ -17,6 +19,7 @@ final readonly class JobMetricsQueryService
 {
     public function __construct(
         private CalculateJobMetricsAction $calculateJobMetrics,
+        private CalculateAggregatedJobMetricsAction $calculateAggregatedJobMetrics,
         private BaselineRepository $baselineRepository,
         private RedisMetricsStore $redisStore,
         private RedisKeyScannerService $keyScanner,
@@ -31,6 +34,14 @@ final readonly class JobMetricsQueryService
         string $queue = 'default',
     ): JobMetricsData {
         return $this->calculateJobMetrics->execute($jobClass, $connection, $queue);
+    }
+
+    /**
+     * Get aggregated metrics for a job class across all queues.
+     */
+    public function getAggregatedJobMetrics(string $jobClass): AggregatedJobMetricsData
+    {
+        return $this->calculateAggregatedJobMetrics->execute($jobClass);
     }
 
     /**

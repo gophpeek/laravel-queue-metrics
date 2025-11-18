@@ -31,6 +31,7 @@ it('records job completion with all parameters', function () {
             25.3,
             300.0,
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -56,6 +57,7 @@ it('records job completion with zero CPU time by default', function () {
             10.5,
             0.0,
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -95,6 +97,7 @@ it('handles very short duration jobs', function () {
             5.2,
             0.1,
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -120,6 +123,7 @@ it('handles very long duration jobs', function () {
             512.0,
             3000000.0,
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -147,6 +151,7 @@ it('records completion time at execution moment', function () {
             30.0,
             500.0,
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(
@@ -172,6 +177,7 @@ it('handles different queue connections', function () {
             15.5,
             250.0,
             Mockery::type(Carbon::class),
+            null,
         );
 
     $this->action->execute(

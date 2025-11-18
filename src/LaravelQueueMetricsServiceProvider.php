@@ -56,8 +56,6 @@ use PHPeek\LaravelQueueMetrics\Services\QueueMetricsQueryService;
 use PHPeek\LaravelQueueMetrics\Services\RedisKeyScannerService;
 use PHPeek\LaravelQueueMetrics\Services\ServerMetricsService;
 use PHPeek\LaravelQueueMetrics\Services\WorkerMetricsQueryService;
-use PHPeek\LaravelQueueMetrics\Support\HookManager;
-use PHPeek\LaravelQueueMetrics\Support\HookPipeline;
 use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
 use PHPeek\LaravelQueueMetrics\Utilities\PercentileCalculator;
 use Spatie\LaravelPackageTools\Package;
@@ -115,10 +113,6 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
 
         // Register utilities
         $this->app->singleton(PercentileCalculator::class);
-
-        // Register hook system
-        $this->app->singleton(HookPipeline::class);
-        $this->app->singleton(HookManager::class);
     }
 
     /**
@@ -187,33 +181,6 @@ final class LaravelQueueMetricsServiceProvider extends PackageServiceProvider
 
         // Register scheduled tasks
         $this->registerScheduledTasks();
-
-        // Load and register hooks from configuration
-        $this->loadHooksFromConfig();
-    }
-
-    /**
-     * Load hooks from configuration and register them.
-     */
-    protected function loadHooksFromConfig(): void
-    {
-        /** @var HookManager $hookManager */
-        $hookManager = $this->app->make(HookManager::class);
-
-        /** @var array<string, array<class-string<MetricsHook>>> $configHooks */
-        $configHooks = config('queue-metrics.hooks', []);
-
-        foreach ($configHooks as $context => $hookClasses) {
-            foreach ($hookClasses as $hookClass) {
-                if (! class_exists($hookClass)) {
-                    continue;
-                }
-
-                /** @var MetricsHook $hook */
-                $hook = $this->app->make($hookClass);
-                $hookManager->register($context, $hook);
-            }
-        }
     }
 
     /**

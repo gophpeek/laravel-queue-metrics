@@ -25,6 +25,7 @@ final readonly class QueueMetricsQueryService
         private RedisMetricsStore $redisStore,
         private RedisKeyScannerService $keyScanner,
         private WorkerHeartbeatRepository $workerHeartbeatRepository,
+        private TrendAnalysisService $trendAnalysis,
     ) {}
 
     /**
@@ -63,6 +64,22 @@ final readonly class QueueMetricsQueryService
         string $queue,
     ): ?BaselineData {
         return $this->baselineRepository->getBaseline($connection, $queue);
+    }
+
+    /**
+     * Get trend data for a queue.
+     *
+     * @return array<string, mixed>
+     */
+    public function getQueueTrends(
+        string $connection,
+        string $queue,
+        int $periodSeconds = 3600,
+    ): array {
+        return [
+            'depth' => $this->trendAnalysis->analyzeQueueDepthTrend($connection, $queue, $periodSeconds),
+            'throughput' => $this->trendAnalysis->analyzeThroughputTrend($connection, $queue, $periodSeconds),
+        ];
     }
 
     /**
@@ -137,6 +154,9 @@ final readonly class QueueMetricsQueryService
                 $totalTime = $totalBusyTime + $totalIdleTime;
                 $utilizationRate = $totalTime > 0 ? ($totalBusyTime / $totalTime) * 100 : 0;
 
+                // Get trend data
+                $trends = $this->getQueueTrends($connection, $queue);
+
                 $queues[$queueKey] = [
                     'connection' => $connection,
                     'queue' => $queue,
@@ -153,6 +173,7 @@ final readonly class QueueMetricsQueryService
                     'utilization_rate' => round($utilizationRate, 2),
                     'active_workers' => $activeWorkers,
                     'baseline' => $baseline ? $baseline->toArray() : null,
+                    'trends' => $trends,
                     'timestamp' => now()->toIso8601String(),
                 ];
             } catch (\Throwable $e) {

@@ -15,7 +15,6 @@ use PHPeek\LaravelQueueMetrics\Http\Controllers\PrometheusController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\QueueDepthController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\QueueMetricsController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\ServerMetricsController;
-use PHPeek\LaravelQueueMetrics\Http\Controllers\TrendAnalysisController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\WorkerController;
 use PHPeek\LaravelQueueMetrics\Http\Controllers\WorkerStatusController;
 
@@ -75,14 +74,6 @@ Route::prefix('queue-metrics')
             ->name('queue-metrics.server.index');
         Route::get('/server/health', [ServerMetricsController::class, 'health'])
             ->name('queue-metrics.server.health');
-
-        // Trend analysis
-        Route::get('/trends/queue-depth/{connection}/{queue}', [TrendAnalysisController::class, 'queueDepth'])
-            ->name('queue-metrics.trends.queue-depth');
-        Route::get('/trends/throughput/{connection}/{queue}', [TrendAnalysisController::class, 'throughput'])
-            ->name('queue-metrics.trends.throughput');
-        Route::get('/trends/worker-efficiency', [TrendAnalysisController::class, 'workerEfficiency'])
-            ->name('queue-metrics.trends.worker-efficiency');
 
         // Prometheus export
         if (config('queue-metrics.prometheus.enabled', true)) {

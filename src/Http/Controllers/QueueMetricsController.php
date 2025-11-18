@@ -20,9 +20,12 @@ final class QueueMetricsController extends Controller
     public function show(string $connection, string $queue): JsonResponse
     {
         $metrics = $this->metricsQuery->getQueueMetrics($connection, $queue);
+        $trends = $this->metricsQuery->getQueueTrends($connection, $queue);
 
         return response()->json([
-            'data' => $metrics->toArray(),
+            'data' => array_merge($metrics->toArray(), [
+                'trends' => $trends,
+            ]),
         ]);
     }
 }

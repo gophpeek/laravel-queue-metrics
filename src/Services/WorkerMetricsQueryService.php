@@ -21,6 +21,7 @@ final readonly class WorkerMetricsQueryService
         private WorkerRepository $workerRepository,
         private WorkerHeartbeatRepository $workerHeartbeatRepository,
         private JobMetricsRepository $jobMetricsRepository,
+        private TrendAnalysisService $trendAnalysis,
     ) {}
 
     /**
@@ -283,5 +284,15 @@ final readonly class WorkerMetricsQueryService
         }
 
         return $servers;
+    }
+
+    /**
+     * Get worker efficiency trend data.
+     *
+     * @return array<string, mixed>
+     */
+    public function getWorkerEfficiencyTrend(int $periodSeconds = 3600): array
+    {
+        return $this->trendAnalysis->analyzeWorkerEfficiencyTrend($periodSeconds);
     }
 }

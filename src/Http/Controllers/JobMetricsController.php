@@ -21,7 +21,7 @@ final class JobMetricsController extends Controller
     {
         $decodedJobClass = urldecode($jobClass);
 
-        $metrics = $this->metricsQuery->getJobMetrics($decodedJobClass);
+        $metrics = $this->metricsQuery->getAggregatedJobMetrics($decodedJobClass);
 
         return response()->json([
             'data' => $metrics->toArray(),

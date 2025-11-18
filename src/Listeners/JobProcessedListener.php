@@ -40,10 +40,16 @@ final readonly class JobProcessedListener
 
         if ($metricsResult->isSuccess()) {
             $metrics = $metricsResult->getValue();
-            // Get actual memory from system metrics if available
-            $memoryMb = $metrics->current->memoryRssBytes / 1024 / 1024;
-            // Calculate CPU time in milliseconds
-            $cpuTimeMs = $metrics->current->cpuTimes->total() / 100.0; // Convert ticks to ms
+
+            // Use peak memory (maximum RSS during job execution, includes children)
+            $memoryMb = $metrics->peak->memoryRssBytes / 1024 / 1024;
+
+            // Calculate CPU time from delta (actual usage during job, not cumulative)
+            // delta->cpuUsagePercentage() returns percentage (0-100+)
+            // Multiply by duration to get total CPU seconds, then convert to ms
+            $cpuUsagePercent = $metrics->delta->cpuUsagePercentage();
+            $durationSeconds = $metrics->delta->durationSeconds;
+            $cpuTimeMs = ($cpuUsagePercent / 100.0) * $durationSeconds * 1000.0;
         }
 
         $connection = $event->connectionName;

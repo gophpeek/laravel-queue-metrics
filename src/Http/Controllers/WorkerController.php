@@ -24,9 +24,13 @@ final class WorkerController extends Controller
         $queue = $request->query('queue');
 
         $workers = $this->metricsQuery->getActiveWorkers($connection, $queue);
+        $efficiencyTrend = $this->metricsQuery->getWorkerEfficiencyTrend();
 
         return response()->json([
-            'data' => $workers->map(fn ($worker) => $worker->toArray())->values(),
+            'data' => [
+                'workers' => $workers->map(fn ($worker) => $worker->toArray())->values(),
+                'efficiency_trend' => $efficiencyTrend,
+            ],
         ]);
     }
 }

@@ -6,7 +6,6 @@ namespace PHPeek\LaravelQueueMetrics\Actions;
 
 use Carbon\Carbon;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
-use PHPeek\LaravelQueueMetrics\Support\HookManager;
 use Throwable;
 
 /**
@@ -16,7 +15,6 @@ final readonly class RecordJobFailureAction
 {
     public function __construct(
         private JobMetricsRepository $repository,
-        private HookManager $hookManager,
     ) {}
 
     public function execute(
@@ -31,32 +29,16 @@ final readonly class RecordJobFailureAction
             return;
         }
 
-        // Prepare data for hooks
         $exceptionMessage = $exception->getMessage().' in '.$exception->getFile().':'.$exception->getLine();
-        $data = [
-            'job_id' => $jobId,
-            'job_class' => $jobClass,
-            'connection' => $connection,
-            'queue' => $queue,
-            'exception' => $exceptionMessage,
-            'hostname' => $hostname,
-            'failed_at' => Carbon::now(),
-        ];
 
-        // Execute before_record hooks
-        $data = $this->hookManager->execute('before_record', $data);
-        /** @var array<string, mixed> $data */
         $this->repository->recordFailure(
-            jobId: $data['job_id'],
-            jobClass: $data['job_class'],
-            connection: $data['connection'],
-            queue: $data['queue'],
-            exception: $data['exception'],
-            failedAt: $data['failed_at'],
-            hostname: $data['hostname'],
+            jobId: $jobId,
+            jobClass: $jobClass,
+            connection: $connection,
+            queue: $queue,
+            exception: $exceptionMessage,
+            failedAt: Carbon::now(),
+            hostname: $hostname,
         );
-
-        // Execute after_record hooks
-        $this->hookManager->execute('after_record', $data);
     }
 }

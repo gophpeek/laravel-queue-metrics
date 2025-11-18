@@ -4,15 +4,11 @@ declare(strict_types=1);
 
 namespace PHPeek\LaravelQueueMetrics\Facades;
 
-use Closure;
 use Illuminate\Support\Facades\Facade;
-use PHPeek\LaravelQueueMetrics\Contracts\MetricsHook;
 use PHPeek\LaravelQueueMetrics\Services\JobMetricsQueryService;
 use PHPeek\LaravelQueueMetrics\Services\OverviewQueryService;
 use PHPeek\LaravelQueueMetrics\Services\QueueMetricsQueryService;
 use PHPeek\LaravelQueueMetrics\Services\WorkerMetricsQueryService;
-use PHPeek\LaravelQueueMetrics\Support\ClosureHook;
-use PHPeek\LaravelQueueMetrics\Support\HookManager;
 
 /**
  * Facade providing convenient access to queue metrics services.
@@ -39,14 +35,10 @@ use PHPeek\LaravelQueueMetrics\Support\HookManager;
  * @method static array<string, array<string, mixed>> getAllServersWithMetrics()
  * @method static array<string, mixed> getWorkersSummary()
  *
- * Hook methods:
- * @method static void hook(string $context, \Closure|\PHPeek\LaravelQueueMetrics\Contracts\MetricsHook $hook, int $priority = 100)
- *
  * @see \PHPeek\LaravelQueueMetrics\Services\OverviewQueryService
  * @see \PHPeek\LaravelQueueMetrics\Services\JobMetricsQueryService
  * @see \PHPeek\LaravelQueueMetrics\Services\QueueMetricsQueryService
  * @see \PHPeek\LaravelQueueMetrics\Services\WorkerMetricsQueryService
- * @see \PHPeek\LaravelQueueMetrics\Support\HookManager
  */
 final class QueueMetrics extends Facade
 {
@@ -80,24 +72,5 @@ final class QueueMetrics extends Facade
         };
 
         return $service->$method(...$args);
-    }
-
-    /**
-     * Register a hook for a specific context.
-     *
-     * @param  string  $context  Hook context (before_record, after_record, etc.)
-     * @param  Closure|MetricsHook  $hook  Closure or MetricsHook implementation
-     * @param  int  $priority  Lower priority runs first (default: 100)
-     */
-    public static function hook(string $context, Closure|MetricsHook $hook, int $priority = 100): void
-    {
-        $hookManager = app(HookManager::class);
-
-        // Wrap closures in ClosureHook
-        if ($hook instanceof Closure) {
-            $hook = new ClosureHook($hook, $context, $priority);
-        }
-
-        $hookManager->register($context, $hook);
     }
 }

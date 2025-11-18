@@ -27,13 +27,13 @@ final readonly class JobProcessingListener
         $payload = $job->payload();
         $jobId = $job->getJobId();
 
-        // Start tracking process metrics for this job
+        // Start tracking process metrics for this job (including child processes)
         $pid = getmypid();
         if ($pid !== false) {
             ProcessMetrics::start(
                 pid: $pid,
                 trackerId: "job_{$jobId}",
-                includeChildren: false
+                includeChildren: true // Track parent + child processes for accurate metrics
             );
         }
 
