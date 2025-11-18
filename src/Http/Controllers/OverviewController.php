@@ -17,9 +17,12 @@ final class OverviewController extends Controller
         private readonly OverviewQueryService $metricsQuery,
     ) {}
 
-    public function __invoke(): JsonResponse
+    public function __invoke(\Illuminate\Http\Request $request): JsonResponse
     {
-        $overview = $this->metricsQuery->getOverview();
+        // Slim view by default, full view with ?full=1
+        $slim = ! $request->query('full');
+
+        $overview = $this->metricsQuery->getOverview($slim);
 
         return response()->json([
             'data' => $overview,
