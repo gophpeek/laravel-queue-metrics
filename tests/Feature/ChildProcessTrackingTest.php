@@ -59,7 +59,8 @@ it('tracks child processes when job spawns subprocesses', function () {
     expect($stats->processCount)->toBeGreaterThanOrEqual(1);
 
     unset($data);
-})->skip(PHP_OS_FAMILY === 'Windows', 'Child process tracking not supported on Windows');
+})->skip(PHP_OS_FAMILY === 'Windows', 'Child process tracking not supported on Windows')
+    ->group('functional');
 
 it('measures accurate delta between job start and completion', function () {
     $trackerId = 'delta_accuracy_test_'.uniqid();
@@ -96,7 +97,7 @@ it('measures accurate delta between job start and completion', function () {
     // CPU usage should be measurable for computational work
     $cpuPercent = $stats->delta->cpuUsagePercentage();
     expect($cpuPercent)->toBeGreaterThanOrEqual(0.0);
-});
+})->group('functional');
 
 it('tracks peak memory correctly for memory-intensive jobs', function () {
     $trackerId = 'peak_memory_job_'.uniqid();
@@ -138,7 +139,7 @@ it('tracks peak memory correctly for memory-intensive jobs', function () {
 
     // Current memory at end should be less than peak (after freeing $largeData)
     expect($stats->current->memoryRssBytes)->toBeLessThanOrEqual($stats->peak->memoryRssBytes);
-});
+})->group('functional');
 
 it('provides process resource usage compatible with JobProcessedListener calculations', function () {
     $trackerId = 'listener_compat_test_'.uniqid();
@@ -175,4 +176,4 @@ it('provides process resource usage compatible with JobProcessedListener calcula
     expect($cpuTimeMs)->toBeLessThan(60000.0); // Sanity check (< 1 minute)
 
     unset($data);
-});
+})->group('functional');

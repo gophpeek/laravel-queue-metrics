@@ -10,19 +10,28 @@ use PHPeek\LaravelQueueMetrics\Support\RedisMetricsStore;
  * Service for scanning and parsing Redis keys to discover entities.
  * Provides proper dependency injection and testability.
  */
-final readonly class RedisKeyScannerService
+final class RedisKeyScannerService
 {
-    private string $fullPrefix;
+    private ?string $fullPrefix = null;
 
     public function __construct(
-        private RedisMetricsStore $redisStore,
-    ) {
-        // Cache the full prefix calculation
-        /** @var string $redisConnection */
-        $redisConnection = config('queue-metrics.storage.connection', 'default');
-        $connectionPrefix = app('redis')->connection($redisConnection)->_prefix('');
-        $ourPrefix = $this->redisStore->key('');
-        $this->fullPrefix = $connectionPrefix.$ourPrefix;
+        private readonly RedisMetricsStore $redisStore,
+    ) {}
+
+    /**
+     * Get the full Redis key prefix (lazy loaded to avoid connection during boot).
+     */
+    private function getFullPrefix(): string
+    {
+        if ($this->fullPrefix === null) {
+            /** @var string $redisConnection */
+            $redisConnection = config('queue-metrics.storage.connection', 'default');
+            $connectionPrefix = app('redis')->connection($redisConnection)->_prefix('');
+            $ourPrefix = $this->redisStore->key('');
+            $this->fullPrefix = $connectionPrefix.$ourPrefix;
+        }
+
+        return $this->fullPrefix;
     }
 
     /**
@@ -46,15 +55,17 @@ final readonly class RedisKeyScannerService
             return [];
         }
 
+        $fullPrefix = $this->getFullPrefix();
+
         // Extract unique entities from all keys using the provided parser
         $discovered = [];
         foreach ($allKeys as $key) {
             // Remove the full prefix first
-            if (! str_starts_with($key, $this->fullPrefix)) {
+            if (! str_starts_with($key, $fullPrefix)) {
                 continue;
             }
 
-            $keyWithoutPrefix = substr($key, strlen($this->fullPrefix));
+            $keyWithoutPrefix = substr($key, strlen($fullPrefix));
 
             // Parse the key using the provided callable
             $entity = $keyParser($keyWithoutPrefix);

@@ -1,3 +1,9 @@
+---
+title: "Configuration Reference"
+description: "Complete configuration options and environment variables for Laravel Queue Metrics"
+weight: 90
+---
+
 # Configuration Reference
 
 Complete configuration options for Laravel Queue Metrics.
@@ -181,5 +187,5 @@ QUEUE_METRICS_BASELINE_DEVIATION_THRESHOLD=2.0
 
 ## Next Steps
 
-- [API Endpoints](api-endpoints.md) - HTTP access to metrics
-- [Prometheus](prometheus.md) - Monitoring integration
+- [API Endpoints](basic-usage/api-endpoints) - HTTP access to metrics
+- [Prometheus](advanced-usage/prometheus) - Monitoring integration

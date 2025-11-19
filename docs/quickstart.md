@@ -1,3 +1,9 @@
+---
+title: "Quick Start"
+description: "Get up and running with Laravel Queue Metrics in 5 minutes"
+weight: 3
+---
+
 # Quick Start
 
 Get up and running with Laravel Queue Metrics in 5 minutes.
@@ -352,12 +358,10 @@ DB::table('queue_job_metrics')->get();
 ## Next Steps
 
 📚 **Learn More:**
-- [Hooks System](hooks.md) - Transform metrics data
-- [Events](events.md) - React to metrics changes
-- [Facade API](facade-api.md) - Complete API reference
-- [Configuration](configuration-reference.md) - All config options
+- [Events](advanced-usage/events) - React to metrics changes
+- [Facade API](basic-usage/facade-api) - Complete API reference
+- [Configuration](configuration-reference) - All config options
 
 🏗️ **Advanced:**
-- [Architecture](architecture.md) - How it works
-- [Custom Storage Drivers](custom-storage-drivers.md) - Extend storage
-- [Performance Tuning](performance.md) - Optimize for scale
+- [Architecture](advanced-usage/architecture) - How it works
+- [Performance Tuning](advanced-usage/performance) - Optimize for scale

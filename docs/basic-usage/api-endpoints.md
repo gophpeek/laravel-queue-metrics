@@ -1,4 +1,10 @@
-# API Endpoints
+---
+title: "HTTP API Endpoints"
+description: "RESTful HTTP endpoints for accessing queue metrics via HTTP requests"
+weight: 11
+---
+
+# HTTP API Endpoints
 
 Complete HTTP API reference for Laravel Queue Metrics.
 

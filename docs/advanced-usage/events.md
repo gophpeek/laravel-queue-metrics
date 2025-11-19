@@ -1,6 +1,12 @@
-# Events
+---
+title: "Events System"
+description: "React to queue metrics changes and lifecycle events in your application"
+weight: 32
+---
 
-Laravel Queue Metrics dispatches domain events that allow you to react to significant occurrences in your queue system. Unlike [Hooks](hooks.md) which transform data, events are notifications that enable integrations, alerts, and side-effects.
+# Events System
+
+Laravel Queue Metrics dispatches domain events that allow you to react to significant occurrences in your queue system. Events are notifications that enable integrations, alerts, and side-effects.
 
 ## Overview
 

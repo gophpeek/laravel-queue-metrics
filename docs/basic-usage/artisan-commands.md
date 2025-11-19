@@ -1,3 +1,9 @@
+---
+title: "Artisan Commands"
+description: "Command-line tools for queue metrics management and maintenance"
+weight: 12
+---
+
 # Artisan Commands
 
 Laravel Queue Metrics provides Artisan commands for maintenance and monitoring.

@@ -1,3 +1,9 @@
+---
+title: "Performance Tuning"
+description: "Optimize Laravel Queue Metrics for high-throughput systems and resource efficiency"
+weight: 34
+---
+
 # Performance Tuning
 
 Optimize Laravel Queue Metrics for your workload and scale.
