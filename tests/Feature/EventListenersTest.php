@@ -11,6 +11,9 @@ use PHPeek\LaravelQueueMetrics\LaravelQueueMetricsServiceProvider;
 use PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository;
 use PHPeek\LaravelQueueMetrics\Tests\Feature\Support\TestJob;
 
+/**
+ * @group redis
+ */
 final class EventListenersTest extends TestCase
 {
     use RefreshDatabase;

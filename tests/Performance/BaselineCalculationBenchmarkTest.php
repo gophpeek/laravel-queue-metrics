@@ -23,7 +23,7 @@ test('baseline calculation completes within acceptable time', function () {
 
     // Assert: Should complete within 5 seconds even with 1000 samples
     expect($duration)->toBeLessThan(5.0);
-})->group('performance', 'slow');
+})->group('performance', 'slow', 'redis');
 
 test('batch baseline fetching is faster than sequential', function () {
     $baselineRepository = app(BaselineRepository::class);
@@ -51,7 +51,7 @@ test('batch baseline fetching is faster than sequential', function () {
     // Assert: Batch should not be significantly slower (allow 2x tolerance for overhead)
     // With empty data, batch operations may have pipeline overhead
     expect($batchDuration)->toBeLessThan($sequentialDuration * 2);
-})->group('performance', 'slow');
+})->group('performance', 'slow', 'redis');
 
 test('key scanning performance is acceptable for large datasets', function () {
     $keyScanner = app(\PHPeek\LaravelQueueMetrics\Services\RedisKeyScannerService::class);
@@ -75,7 +75,7 @@ test('key scanning performance is acceptable for large datasets', function () {
 
     // Assert: Scanning should complete within 2 seconds
     expect($duration)->toBeLessThan(2.0);
-})->group('performance');
+})->group('performance', 'redis');
 
 test('overview query aggregation completes within acceptable time', function () {
     $overviewService = app(\PHPeek\LaravelQueueMetrics\Services\OverviewQueryService::class);
@@ -91,7 +91,7 @@ test('overview query aggregation completes within acceptable time', function () 
     expect($duration)->toBeLessThan(3.0);
     expect($overview)->toBeArray();
     expect($overview)->toHaveKeys(['queues', 'jobs', 'servers', 'workers', 'baselines', 'metadata']);
-})->group('performance', 'slow');
+})->group('performance', 'slow', 'redis');
 
 test('redis transaction is faster or same speed as pipeline for critical mutations', function () {
     $jobMetricsRepository = app(\PHPeek\LaravelQueueMetrics\Repositories\Contracts\JobMetricsRepository::class);
@@ -127,7 +127,7 @@ test('redis transaction is faster or same speed as pipeline for critical mutatio
 
     // Assert: 10 transactions should complete within 1 second
     expect($duration)->toBeLessThan(1.0);
-})->group('performance');
+})->group('performance', 'redis');
 
 test('memory usage stays reasonable during large batch operations', function () {
     $overviewService = app(\PHPeek\LaravelQueueMetrics\Services\OverviewQueryService::class);
@@ -141,4 +141,4 @@ test('memory usage stays reasonable during large batch operations', function () 
 
     // Assert: Memory increase should be less than 50MB for overview query
     expect($memoryIncrease)->toBeLessThan(50);
-})->group('performance');
+})->group('performance', 'redis');
