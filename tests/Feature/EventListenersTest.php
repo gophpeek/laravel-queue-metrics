@@ -69,6 +69,8 @@ final class EventListenersTest extends TestCase
 
     public function test_metrics_are_recorded_with_sync_queue(): void
     {
+        $this->markTestSkipped('Requires Redis connection - run with redis group');
+
         // This test verifies that metrics ARE recorded even with sync queue
         config(['queue.default' => 'sync']);
 
