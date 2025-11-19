@@ -51,7 +51,7 @@ test('it exports queue depth metrics with labels', function () {
     // Verify specific metric values with labels
     expect($metrics)->toContain('test_namespace_queue_depth_pending{queue="default",connection="redis"} 80');
     expect($metrics)->toContain('test_namespace_queue_depth_total{queue="default",connection="redis"} 100');
-});
+})->group('functional');
 
 test('it exports job metrics with execution counters', function () {
     config(['queue-metrics.prometheus.namespace' => 'test_namespace']);
@@ -91,7 +91,7 @@ test('it exports job metrics with execution counters', function () {
     // Verify success/failure rates are percentages (0-100 scale)
     expect($metrics)->toContain('test_namespace_job_success_rate_percent{job="App\\\\Jobs\\\\ProcessOrder",queue="default",connection="redis"} 95');
     expect($metrics)->toContain('test_namespace_job_failure_rate_percent{job="App\\\\Jobs\\\\ProcessOrder",queue="default",connection="redis"} 5');
-});
+})->group('functional');
 
 test('it exports worker metrics', function () {
     config(['queue-metrics.prometheus.namespace' => 'test_namespace']);
@@ -128,7 +128,7 @@ test('it exports worker metrics', function () {
 
     // Verify total jobs processed
     expect($metrics)->toContain('test_namespace_worker_jobs_processed_total 5000');
-});
+})->group('functional');
 
 test('it exports baseline metrics with labels', function () {
     config(['queue-metrics.prometheus.namespace' => 'test_namespace']);
@@ -169,7 +169,7 @@ test('it exports baseline metrics with labels', function () {
     // Verify specific values with all 3 labels
     expect($metrics)->toContain('test_namespace_baseline_cpu_percent_per_job{queue="default",connection="redis",job="App\\\\Jobs\\\\SendEmail"} 15.5');
     expect($metrics)->toContain('test_namespace_baseline_confidence_score{queue="default",connection="redis",job="App\\\\Jobs\\\\SendEmail"} 0.85');
-});
+})->group('functional');
 
 test('it handles missing queue labels gracefully', function () {
     config(['queue-metrics.prometheus.namespace' => 'test_namespace']);
@@ -198,4 +198,4 @@ test('it handles missing queue labels gracefully', function () {
     // Should use 'unknown' for missing labels
     expect($metrics)->toContain('queue="unknown"');
     expect($metrics)->toContain('connection="unknown"');
-});
+})->group('functional');
