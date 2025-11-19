@@ -172,7 +172,7 @@ final class RedisMetricsStore
     public function addToSet(string $key, array $members): void
     {
         if (! empty($members)) {
-            $this->getRedis()->sadd($key, $members);
+            $this->getRedis()->sadd($key, ...$members);
         }
     }
 
@@ -190,7 +190,7 @@ final class RedisMetricsStore
     public function removeFromSet(string $key, array $members): void
     {
         if (! empty($members)) {
-            $this->getRedis()->srem($key, $members);
+            $this->getRedis()->srem($key, ...$members);
         }
     }
 
