@@ -1,3 +1,9 @@
+---
+title: "Prometheus Integration"
+description: "Export queue metrics to Prometheus for centralized monitoring with Grafana dashboards"
+weight: 33
+---
+
 # Prometheus Integration
 
 Laravel Queue Metrics provides native Prometheus metrics export for monitoring and alerting.

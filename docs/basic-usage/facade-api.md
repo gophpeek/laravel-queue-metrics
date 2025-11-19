@@ -1,3 +1,9 @@
+---
+title: "Facade API"
+description: "PHP facade interface for programmatic access to queue metrics"
+weight: 10
+---
+
 # Facade API
 
 The `QueueMetrics` facade provides a clean, developer-friendly interface for accessing queue metrics. It's the recommended way to interact with the package programmatically.
@@ -486,5 +492,5 @@ function analyzeJob(string $jobClass): array
 
 ## Next Steps
 
-- See [API Documentation](api-endpoints.md) for HTTP endpoints
-- Learn about [Events](events.md) for reacting to metrics
+- See [HTTP API](api-endpoints) for REST endpoints
+- Learn about [Events](../advanced-usage/events) for reacting to metrics
