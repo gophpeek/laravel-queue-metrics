@@ -10,6 +10,12 @@ use PHPeek\LaravelQueueMetrics\Repositories\Contracts\QueueMetricsRepository;
  * Performance benchmark tests for critical operations.
  * These tests ensure performance doesn't regress.
  */
+beforeEach(function () {
+    if (! getenv('REDIS_AVAILABLE')) {
+        $this->markTestSkipped('Requires Redis - run with redis group');
+    }
+});
+
 test('baseline calculation completes within acceptable time', function () {
     $action = app(CalculateBaselinesAction::class);
     $queueRepository = app(QueueMetricsRepository::class);
