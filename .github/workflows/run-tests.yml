@@ -59,7 +59,7 @@ jobs:
       - name: Execute tests
         run: |
           if [ "${{ matrix.stability }}" == "prefer-lowest" ]; then
-            vendor/bin/pest --ci --exclude-group=redis,arch
+            vendor/bin/pest --ci --exclude-group=redis,arch,functional
           else
             vendor/bin/pest --ci --exclude-group=redis
           fi
