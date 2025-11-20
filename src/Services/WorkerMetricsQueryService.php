@@ -22,6 +22,7 @@ final readonly class WorkerMetricsQueryService
         private WorkerHeartbeatRepository $workerHeartbeatRepository,
         private JobMetricsRepository $jobMetricsRepository,
         private TrendAnalysisService $trendAnalysis,
+        private ServerMetricsService $serverMetricsService,
     ) {}
 
     /**
@@ -279,6 +280,17 @@ final readonly class WorkerMetricsQueryService
                 } elseif ($utilization < 0.3) {
                     $server['utilization']['capacity_recommendation'] =
                         'Consider reducing worker count to optimize resource usage';
+                }
+            }
+
+            // Add system resource limits (only for current server)
+            // Note: This gets system limits for the current server running this code
+            // For multi-server setups, we'd need each server to report its own limits
+            // Uses fast getSystemLimits() to avoid macOS CPU polling performance issues
+            if ($hostname === gethostname()) {
+                $systemLimits = $this->serverMetricsService->getSystemLimits();
+                if ($systemLimits['available']) {
+                    $server['system_limits'] = $systemLimits;
                 }
             }
         }

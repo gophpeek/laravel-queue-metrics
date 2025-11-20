@@ -176,6 +176,10 @@ final readonly class OverviewQueryService implements OverviewQueryInterface
     /**
      * Filter server metrics to essential dashboard fields only.
      *
+     * Returns simplified server data with clear separation between:
+     * - Worker metrics: Job counts, worker utilization (from queue workers)
+     * - System limits: CPU cores, total memory (physical server resources)
+     *
      * @param  array<string, array<string, mixed>>  $servers
      * @return array<string, array<string, mixed>>
      */
@@ -185,18 +189,32 @@ final readonly class OverviewQueryService implements OverviewQueryInterface
             $workers = is_array($server['workers'] ?? null) ? $server['workers'] : [];
             $utilization = is_array($server['utilization'] ?? null) ? $server['utilization'] : [];
             $performance = is_array($server['performance'] ?? null) ? $server['performance'] : [];
+            $systemLimits = is_array($server['system_limits'] ?? null) ? $server['system_limits'] : null;
 
             $serverUtilization = $utilization['server_utilization'] ?? 0;
             $utilizationPercent = is_numeric($serverUtilization) ? round((float) $serverUtilization * 100, 2) : 0;
 
-            return [
+            $result = [
                 'hostname' => $server['hostname'] ?? '',
-                'workers_total' => $workers['total'] ?? 0,
-                'workers_active' => $workers['active'] ?? 0,
-                'workers_idle' => $workers['idle'] ?? 0,
-                'utilization_percent' => $utilizationPercent,
-                'jobs_processed' => $performance['total_jobs_processed'] ?? 0,
+                // Worker-level metrics (from queue workers)
+                'workers' => [
+                    'total' => $workers['total'] ?? 0,
+                    'active' => $workers['active'] ?? 0,
+                    'idle' => $workers['idle'] ?? 0,
+                    'utilization_percent' => $utilizationPercent,
+                ],
+                // Job processing metrics (from queue workers)
+                'jobs' => [
+                    'processed' => $performance['total_jobs_processed'] ?? 0,
+                ],
             ];
+
+            // System resource limits (physical server capacity)
+            if ($systemLimits !== null) {
+                $result['system_limits'] = $systemLimits;
+            }
+
+            return $result;
         }, $servers);
     }
 
