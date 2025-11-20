@@ -9,10 +9,121 @@ use PHPeek\SystemMetrics\SystemMetrics;
 /**
  * Service for collecting server-wide resource metrics.
  */
-final readonly class ServerMetricsService
+final class ServerMetricsService
 {
+    /** @var array<string, mixed>|null */
+    private static ?array $cachedMetrics = null;
+
+    private static ?int $cacheTimestamp = null;
+
+    private const CACHE_TTL_SECONDS = 5; // Cache CPU metrics for 5 seconds
+
     /**
-     * Get current server resource metrics.
+     * Get current server resource limits and usage (with caching for performance).
+     *
+     * Returns system limits and current usage with 5-second cache to avoid
+     * macOS CPU polling performance issues (2+ seconds per call).
+     *
+     * Includes:
+     * - Memory: total, used, available, usage_percent (always fresh, fast)
+     * - CPU: cores, usage_percent (cached for 5 seconds to avoid slow polling)
+     *
+     * @return array<string, mixed>
+     */
+    public function getSystemLimits(): array
+    {
+        // Check if cached metrics are still valid (within TTL)
+        $now = time();
+        $cacheValid = self::$cachedMetrics !== null
+            && self::$cacheTimestamp !== null
+            && ($now - self::$cacheTimestamp) < self::CACHE_TTL_SECONDS;
+
+        if ($cacheValid && self::$cachedMetrics !== null) {
+            // Return cached metrics (includes CPU usage from previous call)
+            return self::$cachedMetrics;
+        }
+
+        // Cache expired or not set - fetch fresh metrics
+        try {
+            $result = SystemMetrics::overview();
+
+            if (! $result->isSuccess()) {
+                return [
+                    'available' => false,
+                    'error' => 'Failed to collect system metrics',
+                ];
+            }
+
+            $overview = $result->getValue();
+
+            // CPU metrics (now 21x faster on macOS with FFI!)
+            $cpuCores = $overview->cpu->coreCount();
+            // Note: v1.4.0 breaking change - usagePercentage() now returns 0-100% directly
+            $cpuUsagePercent = 0.0;
+            if ($overview->cpu->total->total() > 0) {
+                $cpuUsagePercent = ($overview->cpu->total->busy() / $overview->cpu->total->total()) * 100;
+            }
+
+            // Memory metrics (fast, always fresh)
+            $memoryTotalMb = $overview->memory->totalBytes / (1024 * 1024);
+            $memoryUsedMb = $overview->memory->usedBytes / (1024 * 1024);
+            $memoryAvailableMb = $memoryTotalMb - $memoryUsedMb;
+            $memoryUsagePercent = $overview->memory->usedPercentage();
+
+            // Load average (new in v1.4.0 with FFI - 12x faster!)
+            // Load average is a separate facade method, not part of overview
+            $loadAverage = [
+                '1min' => 0.0,
+                '5min' => 0.0,
+                '15min' => 0.0,
+            ];
+            try {
+                $loadResult = SystemMetrics::loadAverage();
+                if ($loadResult->isSuccess()) {
+                    $load = $loadResult->getValue();
+                    $loadAverage = [
+                        '1min' => $load->oneMinute,
+                        '5min' => $load->fiveMinutes,
+                        '15min' => $load->fifteenMinutes,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // Load average is optional, continue with zeros if unavailable
+            }
+
+            $metrics = [
+                'available' => true,
+                'cpu' => [
+                    'cores' => $cpuCores,
+                    'usage_percent' => round($cpuUsagePercent, 2),
+                    'load_average' => $loadAverage,
+                ],
+                'memory' => [
+                    'total_mb' => round($memoryTotalMb, 2),
+                    'used_mb' => round($memoryUsedMb, 2),
+                    'available_mb' => round($memoryAvailableMb, 2),
+                    'usage_percent' => round($memoryUsagePercent, 2),
+                ],
+            ];
+
+            // Cache the metrics
+            self::$cachedMetrics = $metrics;
+            self::$cacheTimestamp = $now;
+
+            return $metrics;
+        } catch (\Throwable $e) {
+            return [
+                'available' => false,
+                'error' => 'Exception collecting system metrics: '.$e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get current server resource metrics (including usage).
+     *
+     * WARNING: On macOS, CPU usage calculation can be slow (1-2 seconds).
+     * Consider using getSystemLimits() for overview/dashboard endpoints.
      *
      * @return array<string, mixed>
      */
