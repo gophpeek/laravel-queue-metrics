@@ -16,6 +16,9 @@ beforeEach(function () {
     config()->set('queue-metrics.enabled', true);
     config()->set('queue-metrics.storage.driver', 'redis');
     config()->set('queue-metrics.storage.connection', 'default');
+
+    // Flush Redis before each test to ensure clean state
+    \Illuminate\Support\Facades\Redis::connection('default')->flushdb();
 });
 
 it('calculates queue metrics from job metrics', function () {
@@ -28,34 +31,39 @@ it('calculates queue metrics from job metrics', function () {
     $jobRepo = app(JobMetricsRepository::class);
     $queueRepo = app(QueueMetricsRepository::class);
 
-    // Mark jobs as discovered
-    $jobRepo->markJobDiscovered($jobClass1, $connection, $queue);
-    $jobRepo->markJobDiscovered($jobClass2, $connection, $queue);
-
     // Mark queue as discovered
     $queueRepo->markQueueDiscovered($connection, $queue);
 
     // Record job completions for job 1: 10 jobs, 100ms avg duration
+    // Note: recordStart() now handles job discovery atomically
     for ($i = 0; $i < 10; $i++) {
+        $jobId = "job-1-{$i}";
+        $jobRepo->recordStart($jobId, $jobClass1, $connection, $queue, \Carbon\Carbon::now());
         $jobRepo->recordCompletion(
+            jobId: $jobId,
             jobClass: $jobClass1,
             connection: $connection,
             queue: $queue,
             durationMs: 100.0,
             memoryMb: 10.0,
             cpuTimeMs: 50.0,
+            completedAt: \Carbon\Carbon::now(),
         );
     }
 
     // Record job completions for job 2: 5 jobs, 200ms avg duration
     for ($i = 0; $i < 5; $i++) {
+        $jobId = "job-2-{$i}";
+        $jobRepo->recordStart($jobId, $jobClass2, $connection, $queue, \Carbon\Carbon::now());
         $jobRepo->recordCompletion(
+            jobId: $jobId,
             jobClass: $jobClass2,
             connection: $connection,
             queue: $queue,
             durationMs: 200.0,
             memoryMb: 15.0,
             cpuTimeMs: 75.0,
+            completedAt: \Carbon\Carbon::now(),
         );
     }
 
@@ -70,7 +78,7 @@ it('calculates queue metrics from job metrics', function () {
 
     // Weighted average duration: (10 * 100 + 5 * 200) / 15 = 133.33ms
     $expectedAvgDuration = (10 * 100.0 + 5 * 200.0) / 15;
-    expect($metrics['avg_duration'])->toBe($expectedAvgDuration);
+    expect($metrics['avg_duration'])->toEqualWithDelta($expectedAvgDuration, 0.01);
 
     // Throughput should be sum of both job classes
     expect($metrics['throughput_per_minute'])->toBeGreaterThan(0.0);
@@ -107,29 +115,34 @@ it('calculates failure rate correctly', function () {
     $jobRepo = app(JobMetricsRepository::class);
     $queueRepo = app(QueueMetricsRepository::class);
 
-    $jobRepo->markJobDiscovered($jobClass, $connection, $queue);
     $queueRepo->markQueueDiscovered($connection, $queue);
 
     // Record 7 successful completions
+    // Note: recordStart() now handles job discovery atomically
     for ($i = 0; $i < 7; $i++) {
+        $jobId = "job-success-{$i}";
+        $jobRepo->recordStart($jobId, $jobClass, $connection, $queue, \Carbon\Carbon::now());
         $jobRepo->recordCompletion(
+            jobId: $jobId,
             jobClass: $jobClass,
             connection: $connection,
             queue: $queue,
             durationMs: 100.0,
             memoryMb: 10.0,
             cpuTimeMs: 50.0,
+            completedAt: \Carbon\Carbon::now(),
         );
     }
 
     // Record 3 failures
     for ($i = 0; $i < 3; $i++) {
         $jobRepo->recordFailure(
+            jobId: "job-failure-{$i}",
             jobClass: $jobClass,
             connection: $connection,
             queue: $queue,
             exception: 'Test exception',
-            failedAt: time(),
+            failedAt: \Carbon\Carbon::now(),
         );
     }
 
@@ -156,16 +169,20 @@ it('command calculates all queues', function () {
     foreach ($queues as $q) {
         $queueRepo->markQueueDiscovered($q['connection'], $q['queue']);
         $jobClass = 'App\\Jobs\\TestJob'.ucfirst($q['queue']);
-        $jobRepo->markJobDiscovered($jobClass, $q['connection'], $q['queue']);
 
         // Record some completions
+        // Note: recordStart() now handles job discovery atomically
+        $jobId = "job-{$q['queue']}-1";
+        $jobRepo->recordStart($jobId, $jobClass, $q['connection'], $q['queue'], \Carbon\Carbon::now());
         $jobRepo->recordCompletion(
+            jobId: $jobId,
             jobClass: $jobClass,
             connection: $q['connection'],
             queue: $q['queue'],
             durationMs: 150.0,
             memoryMb: 12.0,
             cpuTimeMs: 60.0,
+            completedAt: \Carbon\Carbon::now(),
         );
     }
 
@@ -178,7 +195,7 @@ it('command calculates all queues', function () {
     foreach ($queues as $q) {
         $metrics = $queueRepo->getLatestMetrics($q['connection'], $q['queue']);
         expect($metrics)->not()->toBeEmpty();
-        expect($metrics['avg_duration'])->toBe(150.0);
+        expect($metrics['avg_duration'])->toEqualWithDelta(150.0, 0.01);
     }
 })->group('redis');
 
@@ -191,15 +208,20 @@ it('command calculates specific queue', function () {
     $queueRepo = app(QueueMetricsRepository::class);
 
     $queueRepo->markQueueDiscovered($connection, $queue);
-    $jobRepo->markJobDiscovered($jobClass, $connection, $queue);
 
+    // Record job completion
+    // Note: recordStart() now handles job discovery atomically
+    $jobId = 'job-specific-1';
+    $jobRepo->recordStart($jobId, $jobClass, $connection, $queue, \Carbon\Carbon::now());
     $jobRepo->recordCompletion(
+        jobId: $jobId,
         jobClass: $jobClass,
         connection: $connection,
         queue: $queue,
         durationMs: 250.0,
         memoryMb: 20.0,
         cpuTimeMs: 100.0,
+        completedAt: \Carbon\Carbon::now(),
     );
 
     // Execute command for specific queue
@@ -211,7 +233,7 @@ it('command calculates specific queue', function () {
     expect($exitCode)->toBe(0);
 
     $metrics = $queueRepo->getLatestMetrics($connection, $queue);
-    expect($metrics['avg_duration'])->toBe(250.0);
+    expect($metrics['avg_duration'])->toEqualWithDelta(250.0, 0.01);
 })->group('redis');
 
 it('command fails when queue specified without connection', function () {
