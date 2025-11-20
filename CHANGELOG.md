@@ -2,6 +2,14 @@
 
 All notable changes to `laravel-queue-metrics` will be documented in this file.
 
+## v1.3.0 - 2025-11-20
+
+### What's Changed
+
+* refactor!: Restructure metrics response for clear abstraction separation by @sylvesterdamgaard in https://github.com/gophpeek/laravel-queue-metrics/pull/3
+
+**Full Changelog**: https://github.com/gophpeek/laravel-queue-metrics/compare/v1.2.0...v1.3.0
+
 ## v1.2.0 - 2025-11-20
 
 ### What's Changed
