@@ -57,29 +57,41 @@ final readonly class LaravelQueueInspector implements QueueInspector
      */
     public function getAllQueues(): array
     {
-        $queues = config('queue.connections', []);
+        /** @var array<string, array<string, mixed>> $connections */
+        $connections = config('queue.connections', []);
         $discovered = ['default'];
 
-        foreach ($queues as $connection => $config) {
-            if (isset($config['queue'])) {
-                $discovered[] = $config['queue'];
+        foreach ($connections as $connection => $config) {
+            $queue = $config['queue'] ?? null;
+            if (is_string($queue)) {
+                $discovered[] = $queue;
             }
 
             // Also check for multiple queues in config
-            if (isset($config['queues']) && is_array($config['queues'])) {
-                $discovered = array_merge($discovered, $config['queues']);
+            $queues = $config['queues'] ?? null;
+            if (is_array($queues)) {
+                foreach ($queues as $q) {
+                    if (is_string($q)) {
+                        $discovered[] = $q;
+                    }
+                }
             }
         }
 
         // Get from workers configuration if available
+        /** @var array<int|string, array<string, mixed>> $workers */
         $workers = config('queue.workers', []);
         foreach ($workers as $worker) {
-            if (isset($worker['queue'])) {
-                $queues = explode(',', $worker['queue']);
-                $discovered = array_merge($discovered, $queues);
+            $workerQueue = $worker['queue'] ?? null;
+            if (is_string($workerQueue)) {
+                $queueList = explode(',', $workerQueue);
+                foreach ($queueList as $q) {
+                    $discovered[] = $q;
+                }
             }
         }
 
+        /** @var array<string> */
         return array_values(array_unique(array_filter($discovered)));
     }
 
@@ -326,7 +338,25 @@ final readonly class LaravelQueueInspector implements QueueInspector
             $reflection = new ReflectionClass($queue);
             $redisProperty = $reflection->getProperty('redis');
             $redisProperty->setAccessible(true);
-            $redis = $redisProperty->getValue($queue);
+            $redisManager = $redisProperty->getValue($queue);
+
+            // Validate Redis manager has required methods
+            if (! is_object($redisManager) || ! method_exists($redisManager, 'connection')) {
+                return $this->emptyQueueDepthData($connection, $queueName);
+            }
+
+            // Get the actual Redis connection from the manager
+            $redis = $redisManager->connection();
+
+            // Validate Redis connection has required methods
+            if (! is_object($redis)
+                || ! method_exists($redis, 'llen')
+                || ! method_exists($redis, 'zcard')
+                || ! method_exists($redis, 'lindex')
+                || ! method_exists($redis, 'zrange')
+            ) {
+                return $this->emptyQueueDepthData($connection, $queueName);
+            }
 
             $prefix = config("queue.connections.{$connection}.prefix");
             if (! is_string($prefix)) {
@@ -385,16 +415,24 @@ final readonly class LaravelQueueInspector implements QueueInspector
                 'error' => $e->getMessage(),
             ]);
 
-            return new QueueDepthData(
-                connection: $connection,
-                queue: $queueName,
-                pendingJobs: 0,
-                reservedJobs: 0,
-                delayedJobs: 0,
-                oldestPendingJobAge: null,
-                oldestDelayedJobAge: null,
-                measuredAt: Carbon::now(),
-            );
+            return $this->emptyQueueDepthData($connection, $queueName);
         }
+    }
+
+    /**
+     * Create an empty QueueDepthData for fallback scenarios.
+     */
+    private function emptyQueueDepthData(string $connection, string $queueName): QueueDepthData
+    {
+        return new QueueDepthData(
+            connection: $connection,
+            queue: $queueName,
+            pendingJobs: 0,
+            reservedJobs: 0,
+            delayedJobs: 0,
+            oldestPendingJobAge: null,
+            oldestDelayedJobAge: null,
+            measuredAt: Carbon::now(),
+        );
     }
 }

@@ -43,11 +43,11 @@ final class RecordTrendDataCommand extends Command
             $allQueues = $this->metricsQuery->getAllQueuesWithMetrics();
 
             foreach ($allQueues as $queueData) {
-                $connection = $queueData['connection'] ?? 'redis';
-                $queue = $queueData['queue'] ?? 'default';
-                $depth = $queueData['depth'] ?? 0;
-
-                $this->recordQueueDepth->execute($connection, $queue, $depth);
+                $this->recordQueueDepth->execute(
+                    $queueData['connection'],
+                    $queueData['queue'],
+                    $queueData['depth']
+                );
                 $recordedQueues++;
             }
         } catch (\Exception $e) {

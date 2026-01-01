@@ -273,6 +273,10 @@ final readonly class TrendAnalysisService
 
         $count = count($efficiencies);
 
+        if ($count === 0) {
+            return ['available' => false, 'message' => 'No valid efficiency data'];
+        }
+
         return [
             'available' => true,
             // Time window context
@@ -286,14 +290,14 @@ final readonly class TrendAnalysisService
             // Worker efficiency statistics
             'efficiency' => [
                 'current' => round(end($efficiencies) ?: 0, 2),
-                'average' => round(array_sum($efficiencies) / max($count, 1), 2),
+                'average' => round(array_sum($efficiencies) / $count, 2),
                 'min' => round(min($efficiencies), 2),
                 'max' => round(max($efficiencies), 2),
             ],
             // Resource usage statistics
             'resource_usage' => [
-                'avg_memory_mb' => round(array_sum($memoryUsages) / max($count, 1), 2),
-                'avg_cpu_percent' => round(array_sum($cpuUsages) / max($count, 1), 2),
+                'avg_memory_mb' => round(array_sum($memoryUsages) / $count, 2),
+                'avg_cpu_percent' => round(array_sum($cpuUsages) / $count, 2),
             ],
         ];
     }

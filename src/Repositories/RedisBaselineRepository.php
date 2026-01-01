@@ -81,7 +81,6 @@ final readonly class RedisBaselineRepository implements BaselineRepository
             return [];
         }
 
-        $driver = $this->redis->driver();
         $baselines = [];
 
         // Fetch each baseline using existing getBaseline method
@@ -207,7 +206,7 @@ final readonly class RedisBaselineRepository implements BaselineRepository
             }
 
             $calculatedAtInt = is_numeric($calculatedAt) ? (int) $calculatedAt : 0;
-            $age = Carbon::now()->timestamp - $calculatedAtInt;
+            $age = (int) Carbon::now()->timestamp - $calculatedAtInt;
 
             if ($age > $olderThanSeconds) {
                 $driver->delete($key);

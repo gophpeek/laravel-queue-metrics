@@ -28,9 +28,7 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
         $queueManager = Queue::connection($connection);
 
         // Get queue size (pending jobs)
-        $size = method_exists($queueManager, 'size')
-            ? $queueManager->size($queue)
-            : 0;
+        $size = $queueManager->size($queue);
 
         // For detailed metrics, we'd need to query the queue backend directly
         // This is a simplified version - extend based on your queue driver
@@ -195,7 +193,7 @@ final readonly class RedisQueueMetricsRepository implements QueueMetricsReposito
             }
 
             $recordedAtInt = is_numeric($recordedAt) ? (int) $recordedAt : 0;
-            $age = Carbon::now()->timestamp - $recordedAtInt;
+            $age = (int) Carbon::now()->timestamp - $recordedAtInt;
 
             if ($age > $olderThanSeconds) {
                 $driver->delete($key);

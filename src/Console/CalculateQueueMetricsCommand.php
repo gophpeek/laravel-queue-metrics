@@ -41,12 +41,10 @@ final class CalculateQueueMetricsCommand extends Command
         }
 
         try {
-            if ($connection !== null && $queue !== null) {
+            if (is_string($connection) && is_string($queue)) {
                 // Calculate for specific queue
-                $connectionStr = is_string($connection) ? $connection : '';
-                $queueStr = is_string($queue) ? $queue : '';
-                $this->info("Calculating metrics for {$connectionStr}:{$queueStr}...");
-                $this->action->execute($connectionStr, $queueStr);
+                $this->info("Calculating metrics for {$connection}:{$queue}...");
+                $this->action->execute($connection, $queue);
                 $this->info('✓ Metrics calculated successfully');
 
                 return self::SUCCESS;

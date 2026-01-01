@@ -38,7 +38,7 @@ final readonly class PrometheusService
         $cacheTtl = config('queue-metrics.prometheus.cache_ttl', 10);
         $cacheTtl = is_numeric($cacheTtl) ? (int) $cacheTtl : 10;
 
-        /** @var array{queues: array<string, array<string, mixed>>, jobs: array<string, array<string, mixed>>, workers: array<string, mixed>, baselines: array<string, array<string, mixed>>} $overview */
+        /** @var array{queues: array<string, array<string, mixed>>, jobs: array<string, array<string, mixed>>, workers: array<string, mixed>, baselines: array<string, array<string, mixed>>, trends?: array<string, mixed>} $overview */
         $overview = Cache::remember(
             'queue_metrics:prometheus:overview',
             now()->addSeconds($cacheTtl),
@@ -177,7 +177,7 @@ final readonly class PrometheusService
             $throughput = $jobData['throughput'] ?? null;
 
             // Duration metrics (converted to seconds for Prometheus convention)
-            if ($duration !== null && isset($duration['avg'], $duration['p50'], $duration['p95'], $duration['p99'], $duration['max'])) {
+            if ($duration !== null) {
                 $durationSeconds = $duration['avg'] / 1000.0;
 
                 // P50 percentile
@@ -222,7 +222,7 @@ final readonly class PrometheusService
             }
 
             // Memory metrics
-            if ($memory !== null && isset($memory['peak'], $memory['p95'], $memory['p99'])) {
+            if ($memory !== null) {
                 // Peak memory gauge
                 Prometheus::addGauge('job_memory_peak_megabytes')
                     ->name('job_memory_peak_megabytes')
@@ -255,7 +255,7 @@ final readonly class PrometheusService
             }
 
             // Execution counters (cumulative metrics)
-            if ($execution !== null && isset($execution['success_count'], $execution['failure_count'])) {
+            if ($execution !== null) {
                 $successCount = $execution['success_count'];
                 $failureCount = $execution['failure_count'];
 
@@ -301,7 +301,7 @@ final readonly class PrometheusService
             }
 
             // Throughput metrics
-            if ($throughput !== null && isset($throughput['per_minute'], $throughput['per_hour'])) {
+            if ($throughput !== null) {
                 Prometheus::addGauge('job_throughput_per_minute')
                     ->name('job_throughput_per_minute')
                     ->namespace($namespace)
