@@ -2,6 +2,16 @@
 
 All notable changes to `laravel-queue-metrics` will be documented in this file.
 
+## v1.4.1 - 2026-01-08
+
+### What's Changed
+
+* fix: Accept both string and int job IDs from Laravel queue drivers
+  - Laravel's database queue driver returns int job IDs while Redis/SQS drivers return string IDs
+  - Changed `$jobId` parameter type from `string` to `string|int` in all actions and repository interfaces
+
+**Full Changelog**: https://github.com/gophpeek/laravel-queue-metrics/compare/v1.4.0...v1.4.1
+
 ## v1.4.0 - 2026-01-02
 
 ### What's Changed
